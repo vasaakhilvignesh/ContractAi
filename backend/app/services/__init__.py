@@ -78,6 +78,14 @@ from app.services.keyword_retrieval_service import (
     query_contract_keywords,
 )
 
+from app.services.hybrid_retrieval_service import (
+    DEFAULT_RRF_K,
+    HybridRetrievalError,
+    compute_rrf_score,
+    reciprocal_rank_fusion,
+    query_contract_hybrid,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -127,7 +135,9 @@ __all__ = [
     "query_contract_chunks",
     "KeywordRetrievalError",
     "query_contract_keywords",
+    "DEFAULT_RRF_K",
+    "HybridRetrievalError",
+    "compute_rrf_score",
+    "reciprocal_rank_fusion",
+    "query_contract_hybrid",
 ]
-
-
-

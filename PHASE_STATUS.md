@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 5B: Keyword Full-Text Retrieval Engine** |
+| **Current Phase** | **Phase 5C: Hybrid Retrieval Fusion & RRF** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 208 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `d9591db` ("feat: add semantic vector retrieval") |
+| **Last Verified State** | Backend: 22 passed (`test_hybrid_retrieval.py`), 14 passed (`test_keyword_retrieval.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `c6594f9` ("feat: add keyword retrieval") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 5C: Hybrid Retrieval Fusion & RRF** |
-| **Exact Next Action** | Implement Reciprocal Rank Fusion (RRF) combining Phase 5A vector similarity and Phase 5B keyword ranking. |
+| **Next Phase** | **Phase 5D: Retrieval Evaluation & Benchmarking** |
+| **Exact Next Action** | Implement retrieval quality evaluation suite (MRR, NDCG@k, Precision@k) against ground-truth contract queries. |
 
 ---
 
@@ -147,7 +147,18 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] REST API endpoints `POST /contracts/{contract_id}/keyword-query` and `/api/v1/contracts/{contract_id}/keyword-query`.
     - [x] 14 comprehensive unit and integration tests in `backend/tests/test_keyword_retrieval.py` (100% pass rate against live Neon PostgreSQL).
     - [x] Verified zero regressions on Phase 5A vector retrieval (18/18 passed).
-  - [ ] **Phase 5C: Hybrid Retrieval Fusion & RRF** *(PLANNED)*
+  - [x] **Phase 5C: Hybrid Retrieval Fusion & RRF** *(Completed)*
+    - [x] Defined Pydantic v2 schemas (`ContractHybridQueryRequest`, `HybridChunkMatch`, `ContractHybridQueryResponse`).
+    - [x] Implemented standalone `hybrid_retrieval_service.py` combining Phase 5A vector similarity and Phase 5B keyword retrieval.
+    - [x] Applied standard Reciprocal Rank Fusion (RRF) formula: `score = sum(1.0 / (k + rank))` with fixed smoothing constant `k = 60`.
+    - [x] Deduplicated chunks appearing in both retrieval paths with combined RRF scores and transparent rank/score provenance.
+    - [x] Preserved full chunk metadata (`page_number`, `chunk_index`, `section_header`, `char_start`, `char_end`, `text`).
+    - [x] Enforced strict contract scoping (`DocumentChunk.contract_id == contract_id`).
+    - [x] Handled empty result sets gracefully without failure (semantic-only, keyword-only, both-empty).
+    - [x] Zero vector embedding leakage in responses.
+    - [x] REST API endpoints `POST /contracts/{contract_id}/hybrid-query` and `/api/v1/contracts/{contract_id}/hybrid-query`.
+    - [x] 22 comprehensive unit, integration, and API tests in `backend/tests/test_hybrid_retrieval.py` (100% pass rate).
+    - [x] Verified zero regressions on Phase 5A vector retrieval and Phase 5B keyword retrieval endpoints.
   - [ ] **Phase 5D: Retrieval Evaluation & Benchmarking** *(PLANNED)*
 - [ ] **Phase 4: Structured Extraction & Deterministic Risk Rules Engine**
   - [ ] Structured extraction schema for clauses (Renewal, Termination, Liability, Indemnification).
@@ -240,8 +251,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Python Bytecode Compilation (Phase 5B) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-12 | Frontend Build (Phase 5B Check) | `npm run build` | **PASSED** (built in 435ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 5B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
-
-
-
-
-
+| 2026-09-12 | Phase 5C Hybrid Retrieval Tests | `pytest tests/test_hybrid_retrieval.py -v` | **PASSED** (22 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Phase 5B Regression Verification | `pytest tests/test_keyword_retrieval.py -v` | **PASSED** (14 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Python Bytecode Compilation (Phase 5C) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-12 | Frontend Build (Phase 5C Check) | `npm run build` | **PASSED** (built in 579ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 5C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |

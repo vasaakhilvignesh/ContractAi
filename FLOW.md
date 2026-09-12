@@ -253,7 +253,7 @@ Contract PDF Upload
 The retrieval engine is implemented in structured sub-phases:
 - **Phase 5A (IMPLEMENTED):** Semantic vector retrieval (`pgvector` cosine similarity over `DocumentChunk.embedding`).
 - **Phase 5B (IMPLEMENTED):** Keyword full-text retrieval (PostgreSQL native Full-Text Search: `tsvector`, `websearch_to_tsquery`, `ts_rank_cd`).
-- **Phase 5C (PLANNED):** Hybrid retrieval fusion (Reciprocal Rank Fusion - RRF) + context boundary filtering.
+- **Phase 5C (IMPLEMENTED):** Hybrid retrieval fusion (Reciprocal Rank Fusion - RRF: `score = sum(1 / (k + rank))` with `k=60`).
 - **Phase 5D (PLANNED):** Formal retrieval-quality evaluation.
 
 When a user searches or queries a contract:
@@ -268,7 +268,7 @@ Backend Retrieval Orchestrator
    └── Keyword Search (Phase 5B — IMPLEMENTED: PostgreSQL tsvector / websearch_to_tsquery / ts_rank_cd)
    │
    ▼
-Hybrid Retrieval Fusion (Phase 5C — PLANNED: Reciprocal Rank Fusion - RRF)
+Hybrid Retrieval Fusion (Phase 5C — IMPLEMENTED: Reciprocal Rank Fusion - RRF)
    │
    ▼
 Reranker / Context Filtering

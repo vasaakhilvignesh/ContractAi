@@ -41,6 +41,8 @@ from app.schemas.query import (
     ContractQueryResponse,
     ContractKeywordQueryRequest,
     ContractKeywordQueryResponse,
+    ContractHybridQueryRequest,
+    ContractHybridQueryResponse,
 )
 from app.services import (
     contract_service,
@@ -50,6 +52,7 @@ from app.services import (
     embedding_generation_service,
     retrieval_service,
     keyword_retrieval_service,
+    hybrid_retrieval_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -803,4 +806,47 @@ async def query_contract_keywords(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during keyword retrieval: {exc}",
+        )
+
+
+@router.post(
+    "/{contract_id}/hybrid-query",
+    response_model=ContractHybridQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Hybrid retrieval with Reciprocal Rank Fusion (RRF)",
+    description=(
+        "Combines semantic vector retrieval (pgvector cosine similarity) and keyword retrieval "
+        "(PostgreSQL Full-Text Search) using Reciprocal Rank Fusion (RRF: score = sum(1 / (k + rank))). "
+        "Deduplicates chunks, preserves chunk metadata, and returns transparent rank and score provenance. "
+        "Strictly contract-scoped, no embeddings returned."
+    ),
+)
+async def query_contract_hybrid(
+    contract_id: uuid.UUID,
+    payload: ContractHybridQueryRequest,
+    db: Session = Depends(get_db),
+) -> ContractHybridQueryResponse:
+    """Execute hybrid retrieval combining semantic and keyword search via RRF."""
+    try:
+        return await hybrid_retrieval_service.query_contract_hybrid(
+            db=db,
+            contract_id=contract_id,
+            query=payload.query,
+            top_k=payload.top_k,
+            rrf_k=payload.rrf_k,
+        )
+    except hybrid_retrieval_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except hybrid_retrieval_service.HybridRetrievalError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Hybrid retrieval failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during hybrid retrieval: {exc}",
         )

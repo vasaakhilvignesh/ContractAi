@@ -222,6 +222,16 @@ Format for each record:
 - **Phase:** Phase 5B
 - **Date:** 2026-09-12
 
+### DEC-027: Hybrid Retrieval Fusion via Reciprocal Rank Fusion (RRF)
+- **Decision:** Combine Phase 5A semantic vector retrieval (pgvector cosine similarity) and Phase 5B keyword retrieval (PostgreSQL native Full-Text Search with `ts_rank_cd`) in a dedicated service layer (`hybrid_retrieval_service.py`) using Reciprocal Rank Fusion (RRF). Apply standard RRF formula `score = sum(1.0 / (k + rank))` with fixed smoothing constant `k = 60`. Deduplicate chunks that appear in both retrieval result sets while preserving chunk metadata, return unified `hybrid_score` and `rrf_score`, and expose transparent rank and score provenance (`semantic_rank`, `semantic_similarity`, `keyword_rank`, `keyword_score`). Support strict contract scoping, bounded `top_k` (1–20, default 5), clean handling of empty result sets, and zero vector embedding leakage. Expose REST endpoints `POST /contracts/{contract_id}/hybrid-query` and `/api/v1/contracts/{contract_id}/hybrid-query`.
+- **Context:** Phase 5C requires merging dense semantic similarity (which excels at conceptual questions) and sparse lexical search (which excels at exact names, dates, numbers, and codes) into a single unified retrieval ranking ahead of Phase 5D evaluation and downstream RAG.
+- **Why this decision was made:** RRF is scale-invariant and distribution-agnostic: unlike linear score combination (`alpha * sim + (1 - alpha) * kw_rank`), RRF does not require normalizing or calibrating incompatible score distributions (cosine similarity in [0, 1] vs unbounded cover density `ts_rank_cd`). The empirical constant `k = 60` (Cormack et al., 2009) is the established standard in modern search systems. Preserving each component's individual rank and score ensures transparent auditability. Deduplication guarantees chunks appearing in both candidate pools receive fused score boosts without duplicate context windows.
+- **Alternatives considered:** Linear score weighting (`alpha * vector_score + (1 - alpha) * keyword_score`); vector-only retrieval; keyword-only retrieval; external cross-encoder reranker.
+- **Why alternatives were rejected:** Linear weighting fails without dynamic calibration across diverse query types and violates explainability. Vector-only misses exact contractual terms and legal citations. Keyword-only fails on conceptual queries. Cross-encoder reranking introduces heavy model dependencies and inference latency (deferred as an optional post-processor in later phases).
+- **Consequences / Trade-offs:** Chunks fetched from both sub-retrievers are fused in-memory; retrieval latency equals the sum (or concurrent execution) of pgvector and PostgreSQL FTS queries. Zero database schema migrations required.
+- **Phase:** Phase 5C
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
@@ -233,10 +243,11 @@ The following architectural decisions have **not yet been made** and will be for
 - **Candidates:** Google Gemini (via official SDK / Firebase AI Logic), OpenAI GPT-4o / GPT-4o-mini, Anthropic Claude 3.5 Sonnet, or local models.
 - **Considerations:** Long context window, structured JSON output enforcement, cost, and latency.
 
-### DEC-012: Hybrid Search & Reranking Architecture
+### DEC-012: Post-Retrieval Reranking Architecture
 - **Status:** **Not decided yet.**
-- **Candidates:** PostgreSQL Full-Text Search (`tsvector`/`tsquery`) + `pgvector` cosine similarity, combined via Reciprocal Rank Fusion (RRF); optional cross-encoder reranker (e.g. Cohere rerank or `bge-reranker`).
-- **Considerations:** Exact keyword matching (dates, dollar figures, specific parties) is critical in contracts where pure vector search fails.
+- **Resolved in Phase 5C:** Hybrid retrieval fusion decided via Reciprocal Rank Fusion (DEC-027).
+- **Remaining Open Question:** Optional secondary cross-encoder reranker (e.g. Cohere rerank or `bge-reranker`) prior to context window injection.
+- **Considerations:** Latency budget vs marginal MRR/NDCG gain.
 
 ### DEC-013: Structured Output Schema & Extraction Technique
 - **Status:** **Not decided yet.**
