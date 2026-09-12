@@ -10,6 +10,9 @@ from app.schemas.contract import (
     ContractResponse,
     ContractListResponse,
     ContractUploadResponse,
+    ProcessingStatus,
+    ContractProcessingStatusUpdate,
+    ContractProcessingStatusResponse,
 )
 
 __all__ = [
@@ -21,5 +24,9 @@ __all__ = [
     "ContractResponse",
     "ContractListResponse",
     "ContractUploadResponse",
+    "ProcessingStatus",
+    "ContractProcessingStatusUpdate",
+    "ContractProcessingStatusResponse",
 ]
+
 

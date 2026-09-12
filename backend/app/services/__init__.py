@@ -9,6 +9,8 @@ from app.services.contract_service import (
     update_contract,
     delete_contract,
     associate_contract_file,
+    update_contract_processing_status,
+    VALID_PROCESSING_TRANSITIONS,
 )
 
 from app.services.storage_service import (
@@ -25,10 +27,13 @@ __all__ = [
     "update_contract",
     "delete_contract",
     "associate_contract_file",
+    "update_contract_processing_status",
+    "VALID_PROCESSING_TRANSITIONS",
     "validate_pdf_upload",
     "save_contract_file",
     "remove_stored_file",
     "sanitize_filename",
 ]
+
 
 

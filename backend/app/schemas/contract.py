@@ -11,9 +11,11 @@ internals or credentials are exposed in API payloads.
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
 
 
 class ContractBase(BaseModel):
@@ -157,4 +159,50 @@ class ContractUploadResponse(BaseModel):
     uploaded_at: datetime = Field(..., description="Timestamp when the file was uploaded and recorded")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProcessingStatus(str, Enum):
+    """Controlled lifecycle states for contract document processing."""
+
+    PENDING = "pending"
+    UPLOADED = "uploaded"
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class ContractProcessingStatusUpdate(BaseModel):
+    """Payload for updating contract processing status."""
+
+    status: ProcessingStatus = Field(
+        ...,
+        description="Target processing status: queued | processing | completed | failed",
+        examples=["queued"],
+    )
+    error_message: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Optional error detail if transitioning to 'failed'",
+        examples=["Extraction timeout on page 14"],
+    )
+
+
+class ContractProcessingStatusResponse(BaseModel):
+    """Response representing contract processing status and progress."""
+
+    contract_id: uuid.UUID = Field(..., description="UUID of the contract")
+    processing_status: str = Field(..., description="Current processing lifecycle status")
+    processing_error: Optional[str] = Field(
+        default=None, description="Error detail if processing failed"
+    )
+    file_name: Optional[str] = Field(
+        default=None, description="Original uploaded filename if file exists"
+    )
+    updated_at: datetime = Field(
+        ..., description="Timestamp when processing status was last updated"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
 

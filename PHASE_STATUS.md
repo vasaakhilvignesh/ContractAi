@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 2B: Contract Upload API** |
+| **Current Phase** | **Phase 2C: Contract Processing State** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 71 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `1885724` ("feat: add contract api foundation") |
+| **Last Verified State** | Backend: 81 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `e7e7526` ("feat: add contract upload api") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 2C: Contract Processing State** |
-| **Exact Next Action** | Commence Phase 2C (Contract processing lifecycle, status transitions, and pipeline tracking). |
+| **Next Phase** | **Phase 3A: PDF Text Extraction & OCR Engine** |
+| **Exact Next Action** | Commence Phase 3A (PDF text extraction, preserving page numbers, section headers, and tabular data). |
 
 ---
 
@@ -46,7 +46,7 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] All 7 application tables and `alembic_version` verified in Neon public schema.
   - [x] All 12 foreign keys and pgvector column verified in Neon database.
   - [x] Live database health check test (`test_health_with_real_db_is_ok`) passed against Neon.
-- [ ] **Phase 2: PDF Ingestion, Text Extraction & Chunking Engine**
+- [x] **Phase 2: PDF Ingestion & Contract State Foundation** *(Completed)*
   - [x] **Phase 2A: Contract API Foundation** *(Completed)*
     - [x] Pydantic v2 schemas (`ContractBase`, `ContractCreate`, `ContractUpdate`, `ContractResponse`, `ContractListResponse`).
     - [x] Contract service layer with data-access operations, attribute filtering, and deterministic pagination.
@@ -65,11 +65,20 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Deterministic re-upload: replaces contract file association and deletes previous physical file.
     - [x] 11 integration tests in `backend/tests/test_contract_upload_api.py` (71 total backend tests passing).
     - [x] Zero database migrations required; reuses Phase 1 schema fields.
-  - [ ] **Phase 2C: Contract Processing State**
-    - [ ] Contract processing state transitions, status tracking, and error capture.
-  - [ ] **Phase 3: PDF Extraction, Text Normalization & Chunking Engine**
+  - [x] **Phase 2C: Contract Processing State** *(Completed)*
+    - [x] Controlled lifecycle state enum (`ProcessingStatus`: `pending`, `uploaded`, `queued`, `processing`, `completed`, `failed`).
+    - [x] Strict state machine rules with valid transitions: `uploaded` -> `queued` -> `processing` -> `completed` / `failed`, with `failed` -> `queued` (retry).
+    - [x] Re-upload resets state back to `uploaded` and clears `processing_error`.
+    - [x] Processing status endpoints: `GET /contracts/{contract_id}/processing-status` and `PATCH /contracts/{contract_id}/processing-status` (with `/api/v1` aliases).
+    - [x] Robust validation: invalid transitions rejected with 400 Bad Request; unrecognized states rejected with 422; missing contracts return 404.
+    - [x] 10 focused tests in `backend/tests/test_contract_processing_state.py` (81 total backend tests passing).
+    - [x] Zero database migrations required; reuses existing `processing_status` and `processing_error` columns.
+- [ ] **Phase 3: PDF Extraction, Text Normalization & Chunking Engine**
+  - [ ] **Phase 3A: PDF Text Extraction & OCR Engine**
     - [ ] Text extraction preserving page numbers, section headers, and tabular data.
+  - [ ] **Phase 3B: Clause-Aware Chunking Pipeline**
     - [ ] Clause-aware chunking pipeline with page-level lineage metadata.
+  - [ ] **Phase 3C: Dense Embedding Generation & pgvector Insertion**
     - [ ] Integration of embedding model to generate dense vectors.
     - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
 - [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
@@ -134,6 +143,11 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 2B) | `pytest tests/ -v` | **PASSED** (71 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 2B Check) | `npm run build` | **PASSED** (built in 235ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 2B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 2C Processing State Tests | `pytest tests/test_contract_processing_state.py -v` | **PASSED** (10 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 2C) | `pytest tests/ -v` | **PASSED** (81 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 2C Check) | `npm run build` | **PASSED** (built in 199ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 2C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+
 
 
 

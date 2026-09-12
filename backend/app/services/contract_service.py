@@ -12,7 +12,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.contract import Contract
-from app.schemas.contract import ContractCreate, ContractUpdate
+from app.schemas.contract import ContractCreate, ContractUpdate, ProcessingStatus
+
 
 
 def get_contract(db: Session, contract_id: uuid.UUID) -> Optional[Contract]:
@@ -112,4 +113,71 @@ def associate_contract_file(
     db.commit()
     db.refresh(db_contract)
     return db_contract
+
+
+VALID_PROCESSING_TRANSITIONS: dict[str, set[str]] = {
+    ProcessingStatus.PENDING.value: set(),  # Document must be uploaded first
+    ProcessingStatus.UPLOADED.value: {ProcessingStatus.QUEUED.value},
+    ProcessingStatus.QUEUED.value: {ProcessingStatus.PROCESSING.value},
+    ProcessingStatus.PROCESSING.value: {
+        ProcessingStatus.COMPLETED.value,
+        ProcessingStatus.FAILED.value,
+    },
+    ProcessingStatus.COMPLETED.value: set(),  # Terminal state (re-upload resets to uploaded)
+    ProcessingStatus.FAILED.value: {ProcessingStatus.QUEUED.value},  # Retry
+}
+
+
+def update_contract_processing_status(
+    db: Session,
+    db_contract: Contract,
+    new_status: ProcessingStatus | str,
+    error_message: str | None = None,
+) -> Contract:
+    """
+    Transition contract processing state according to the valid lifecycle.
+
+    Lifecycle:
+      uploaded -> queued -> processing -> completed
+                                       -> failed -> queued (retry)
+
+    Raises:
+        ValueError if the transition is disallowed or invalid.
+    """
+    current_status = db_contract.processing_status
+    target_status = (
+        new_status.value if isinstance(new_status, ProcessingStatus) else str(new_status)
+    )
+
+    if current_status == ProcessingStatus.PENDING.value:
+        raise ValueError(
+            "Cannot transition processing status: no document has been uploaded for this contract."
+        )
+
+    allowed = VALID_PROCESSING_TRANSITIONS.get(current_status, set())
+    if target_status not in allowed:
+        allowed_list = sorted(list(allowed))
+        if not allowed_list:
+            allowed_msg = "none (terminal state — re-upload a new file to reset)"
+        else:
+            allowed_msg = ", ".join(f"'{s}'" for s in allowed_list)
+        raise ValueError(
+            f"Invalid processing status transition from '{current_status}' to '{target_status}'. "
+            f"Allowed transitions from '{current_status}': [{allowed_msg}]."
+        )
+
+    # If transitioning to failed, record error message
+    if target_status == ProcessingStatus.FAILED.value:
+        db_contract.processing_error = (
+            error_message or "Processing failed without specific error description."
+        )
+    else:
+        # Clear previous error on retry / progression
+        db_contract.processing_error = None
+
+    db_contract.processing_status = target_status
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
+
 

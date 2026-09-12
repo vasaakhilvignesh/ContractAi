@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 2B Complete (Contract Upload API & Storage Verified)  
+> **Status:** Phase 2C Complete (Contract Processing State Lifecycle Verified)  
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
@@ -26,7 +26,7 @@ Deterministic rules turn structured data into actionable intelligence.
 
 ## 2. Architecture Baseline
 
-### Implemented Architecture (Frontend Baseline + Phase 1 DB + Phase 2A/2B Contract & Upload API)
+### Implemented Architecture (Frontend Baseline + Phase 1 DB + Phase 2 Contract Processing Foundation)
 
 | Layer | Technology | Details |
 | :--- | :--- | :--- |
@@ -36,7 +36,7 @@ Deterministic rules turn structured data into actionable intelligence.
 | **Routing** | React Router v7 (`react-router-dom` 7.18.3) | Client-side `BrowserRouter` with nested `<Shell />` layout and route-driven navigation |
 | **Styling & Design System** | Tailwind CSS v4 (`@tailwindcss/vite`) | Utility-first with CSS variables in `src/index.css` (`--primary`, `--accent`, `--risk-*`), Inter and JetBrains Mono typography |
 | **Mock Data Layer** | In-memory TypeScript definitions (`src/data/mock.ts`) | Strongly typed models for `Contract`, `Risk`, `Obligation`, `AuditEvent`, and status enums |
-| **Backend API** | Python 3.13 + FastAPI (`fastapi==0.115.5`, `uvicorn==0.32.1`, `python-multipart==0.0.32`) | CORS middleware, lifespan startup/shutdown, `/health`, `/`, Contract CRUD (`/contracts`), and PDF Upload (`/contracts/{id}/upload`) |
+| **Backend API** | Python 3.13 + FastAPI (`fastapi==0.115.5`, `uvicorn==0.32.1`, `python-multipart==0.0.32`) | CORS middleware, lifespan startup/shutdown, `/health`, `/`, Contract CRUD (`/contracts`), PDF Upload (`/contracts/{id}/upload`), and Processing State (`/contracts/{id}/processing-status`) |
 | **Database ORM & Driver** | SQLAlchemy 2.0 (`sqlalchemy==2.0.36`) + `psycopg2-binary==2.9.10` | 7 domain models, DeclarativeBase, pool pre-ping, connection health check |
 | **Primary Database** | Neon PostgreSQL (cloud-managed serverless) | Branch `production`, Database `neondb` (PostgreSQL 18.6 verified) |
 | **Vector Extension** | `pgvector` (`pgvector==0.3.6` on PostgreSQL) | Version 0.8.6 verified on Neon; `Vector` column mapped on `DocumentChunk` |

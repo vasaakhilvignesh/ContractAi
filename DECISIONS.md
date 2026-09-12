@@ -139,6 +139,17 @@ Format for each record:
 - **Phase:** Phase 2B
 - **Date:** 2026-09-12
 
+### DEC-022: Contract Document Processing State Machine & Lifecycle
+- **Decision:** Application-layer deterministic finite state machine (FSM) managing processing status transitions (`pending` -> `uploaded` -> `queued` -> `processing` -> `completed` / `failed`, with `failed` -> `queued` retry) backed by the existing `processing_status` and `processing_error` columns.
+- **Context:** Phase 2C requires an auditable, controlled processing lifecycle to coordinate downstream extraction (Phase 3) and analysis without premature background queue dependencies.
+- **Why this decision was made:** Centralizing transition rules in the service layer prevents illegal state jumps (such as `uploaded` directly to `completed` or transitioning contracts that have no uploaded file). Reusing existing database columns maintains zero-migration safety. Avoiding external queue brokers (Celery, Redis, RabbitMQ) adheres to Rule 2 and Rule 10 until background processing is actually implemented.
+- **Alternatives considered:** Database-level ENUM or check constraint; Celery/Redis workflow state; workflow engine (Temporal/Airflow).
+- **Why alternatives were rejected:** Altering Neon PostgreSQL with an ENUM type would require schema migrations. Heavy distributed queues add operational dependencies that violate Rule 10 (prefer simple, explainable architecture).
+- **Consequences / Trade-offs:** State transitions are managed synchronously through the API layer; Phase 3 will drive these transitions as part of the extraction pipeline.
+- **Phase:** Phase 2C
+- **Date:** 2026-09-12
+
+
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 

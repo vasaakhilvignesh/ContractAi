@@ -22,8 +22,11 @@ from app.schemas.contract import (
     ContractResponse,
     ContractUpdate,
     ContractUploadResponse,
+    ContractProcessingStatusResponse,
+    ContractProcessingStatusUpdate,
 )
 from app.services import contract_service, storage_service
+
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -213,4 +216,74 @@ async def upload_contract_pdf(
         processing_status=updated_contract.processing_status,
         uploaded_at=updated_contract.updated_at,
     )
+
+
+@router.get(
+    "/{contract_id}/processing-status",
+    response_model=ContractProcessingStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get contract processing status",
+    description="Retrieves the current document processing status and error state for a contract.",
+)
+def get_contract_processing_status(
+    contract_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ContractProcessingStatusResponse:
+    """Get contract processing status."""
+    db_contract = contract_service.get_contract(db=db, contract_id=contract_id)
+    if not db_contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    return ContractProcessingStatusResponse(
+        contract_id=db_contract.id,
+        processing_status=db_contract.processing_status,
+        processing_error=db_contract.processing_error,
+        file_name=db_contract.file_name,
+        updated_at=db_contract.updated_at,
+    )
+
+
+@router.patch(
+    "/{contract_id}/processing-status",
+    response_model=ContractProcessingStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update contract processing status",
+    description="Transitions contract document processing status along the defined state lifecycle.",
+)
+def update_contract_processing_status(
+    contract_id: uuid.UUID,
+    status_in: ContractProcessingStatusUpdate,
+    db: Session = Depends(get_db),
+) -> ContractProcessingStatusResponse:
+    """Transition contract processing status."""
+    db_contract = contract_service.get_contract(db=db, contract_id=contract_id)
+    if not db_contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+
+    try:
+        updated_contract = contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=status_in.status,
+            error_message=status_in.error_message,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    return ContractProcessingStatusResponse(
+        contract_id=updated_contract.id,
+        processing_status=updated_contract.processing_status,
+        processing_error=updated_contract.processing_error,
+        file_name=updated_contract.file_name,
+        updated_at=updated_contract.updated_at,
+    )
+
 

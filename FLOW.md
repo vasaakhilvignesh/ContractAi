@@ -116,12 +116,14 @@ FastAPI Application (`backend/app/main.py`)
    │    ├── GET  /health -> DatabaseHealthSchema & HealthResponseSchema
    │    ├── GET  /       -> Root discovery
    │    └── Contracts (`/contracts` & `/api/v1/contracts`):
-   │         ├── POST   /contracts                      (create contract)
-   │         ├── GET    /contracts                      (list contracts, paginated & filtered)
-   │         ├── GET    /contracts/{contract_id}        (get single contract by UUID)
-   │         ├── PATCH  /contracts/{contract_id}        (partial update contract fields)
-   │         ├── DELETE /contracts/{contract_id}        (delete contract and cascade)
-   │         └── POST   /contracts/{contract_id}/upload (validate, store PDF & associate with contract)
+   │         ├── POST   /contracts                                 (create contract)
+   │         ├── GET    /contracts                                 (list contracts, paginated & filtered)
+   │         ├── GET    /contracts/{contract_id}                   (get single contract by UUID)
+   │         ├── PATCH  /contracts/{contract_id}                   (partial update contract fields)
+   │         ├── DELETE /contracts/{contract_id}                   (delete contract and cascade)
+   │         ├── POST   /contracts/{contract_id}/upload            (validate, store PDF & associate with contract)
+   │         ├── GET    /contracts/{contract_id}/processing-status (retrieve current document processing state)
+   │         └── PATCH  /contracts/{contract_id}/processing-status (transition processing lifecycle state)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
