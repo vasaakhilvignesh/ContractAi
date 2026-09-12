@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 5A: Semantic Vector Retrieval Engine** |
+| **Current Phase** | **Phase 5B: Keyword Full-Text Retrieval Engine** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 194 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `296ed75` ("feat: add typed vector schema and hnsw index") |
+| **Last Verified State** | Backend: 208 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `d9591db` ("feat: add semantic vector retrieval") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 5B: Keyword Full-Text Retrieval Engine** |
-| **Exact Next Action** | Implement PostgreSQL tsvector column, BM25/full-text search service, and contract-scoped keyword retrieval. |
+| **Next Phase** | **Phase 5C: Hybrid Retrieval Fusion & RRF** |
+| **Exact Next Action** | Implement Reciprocal Rank Fusion (RRF) combining Phase 5A vector similarity and Phase 5B keyword ranking. |
 
 ---
 
@@ -135,7 +135,18 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] REST API endpoints `POST /contracts/{contract_id}/query` and `/api/v1/contracts/{contract_id}/query`.
     - [x] 18 comprehensive unit and integration tests in `backend/tests/test_vector_retrieval.py` (100% mocked, 0 real Gemini API calls).
     - [x] Zero database migrations, zero schema changes, zero premature background queues.
-  - [ ] **Phase 5B: Keyword Full-Text Retrieval Engine** *(PLANNED)*
+  - [x] **Phase 5B: Keyword Full-Text Retrieval Engine** *(Completed)*
+    - [x] Added stored generated `search_vector` column to `DocumentChunk` (`to_tsvector('english', text)`).
+    - [x] Created Alembic migration `fd983c1fd05f_add_search_vector_and_gin_index` with GIN indexing.
+    - [x] Defined Pydantic v2 schemas (`ContractKeywordQueryRequest`, `KeywordChunkMatch`, `ContractKeywordQueryResponse`).
+    - [x] Implemented standalone `keyword_retrieval_service.py` with `query_contract_keywords()`.
+    - [x] Safe natural language search parsing via `websearch_to_tsquery('english', query)`.
+    - [x] Relevance scoring via Cover Density ranking (`ts_rank_cd`).
+    - [x] Enforced strict contract scoping (`DocumentChunk.contract_id == contract_id`).
+    - [x] Bounded `top_k` (`ge=1, le=20`, default 5) and clean empty responses for no-match queries.
+    - [x] REST API endpoints `POST /contracts/{contract_id}/keyword-query` and `/api/v1/contracts/{contract_id}/keyword-query`.
+    - [x] 14 comprehensive unit and integration tests in `backend/tests/test_keyword_retrieval.py` (100% pass rate against live Neon PostgreSQL).
+    - [x] Verified zero regressions on Phase 5A vector retrieval (18/18 passed).
   - [ ] **Phase 5C: Hybrid Retrieval Fusion & RRF** *(PLANNED)*
   - [ ] **Phase 5D: Retrieval Evaluation & Benchmarking** *(PLANNED)*
 - [ ] **Phase 4: Structured Extraction & Deterministic Risk Rules Engine**
@@ -223,6 +234,12 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Python Bytecode Compilation (Phase 5A) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-12 | Frontend Build (Phase 5A Check) | `npm run build` | **PASSED** (built in 449ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 5A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 5B Alembic Migration | `alembic upgrade head` | **PASSED** (applied revision `fd983c1fd05f_add_search_vector_and_gin_index`) |
+| 2026-09-12 | Phase 5B Keyword Retrieval Tests | `pytest tests/test_keyword_retrieval.py -v` | **PASSED** (14 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Phase 5A Regression Verification | `pytest tests/test_vector_retrieval.py -v` | **PASSED** (18 passed, 0 skipped, 100% mocked) |
+| 2026-09-12 | Python Bytecode Compilation (Phase 5B) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-12 | Frontend Build (Phase 5B Check) | `npm run build` | **PASSED** (built in 435ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 5B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

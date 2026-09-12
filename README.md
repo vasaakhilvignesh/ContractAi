@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 5A Complete (Semantic Vector Retrieval Engine Verified)
+> **Status:** Phase 5B Complete (Keyword Full-Text Retrieval Engine Verified)
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
@@ -49,7 +49,7 @@ Deterministic rules turn structured data into actionable intelligence.
 | :--- | :--- | :--- |
 | **Document Processing** | PDF text extraction preserving page boundaries & tables | *Phase 2 PLANNED* |
 | **Chunking Engine** | Clause-aware semantic chunking with page metadata | *Phase 2 PLANNED* |
-| **Retrieval Pipeline** | Hybrid Search (pgvector semantic similarity + PostgreSQL tsvector keyword search) + Reranking | *Phase 3 PLANNED* |
+| **Retrieval Pipeline** | Hybrid Search (pgvector semantic similarity [Phase 5A] + PostgreSQL tsvector keyword search [Phase 5B]) + RRF | *Phase 5C PLANNED* |
 | **LLM Orchestration** | Gemini / OpenAI with strict Structured Outputs (JSON Schema / Pydantic) | *Phase 4 PLANNED* |
 | **Risk Rules Engine** | Deterministic business rules evaluating extracted structured facts | *Phase 4 PLANNED* |
 | **Authentication & RBAC** | Per-user document isolation and role-based permissions | *Phase 6 PLANNED* |

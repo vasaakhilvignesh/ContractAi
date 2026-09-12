@@ -211,6 +211,17 @@ Format for each record:
 - **Phase:** Phase 5A
 - **Date:** 2026-09-12
 
+### DEC-026: Keyword Retrieval Engine via PostgreSQL Full-Text Search
+- **Decision:** Implement contract-scoped keyword retrieval (`keyword_retrieval_service.py`) using PostgreSQL native Full-Text Search. Add a stored generated `search_vector` column to `document_chunks` (`GENERATED ALWAYS AS (to_tsvector('english', text)) STORED`), indexed with a PostgreSQL GIN index (`idx_document_chunks_search_vector_gin`). Use `websearch_to_tsquery('english', query)` for safe query construction and Cover Density ranking (`ts_rank_cd`) for relevance scoring. Expose REST endpoints `POST /contracts/{contract_id}/keyword-query` and `/api/v1/contracts/{contract_id}/keyword-query`.
+- **Context:** Phase 5 requires a second independent retrieval mechanism over chunk text alongside Phase 5A semantic vector retrieval, prior to hybrid fusion (Phase 5C).
+- **Technical Distinction:** PostgreSQL native Full-Text Search utilizes `tsvector`, `tsquery`, and `ts_rank` / `ts_rank_cd`. It is **not** BM25 and must not be described as BM25. Cover Density ranking (`ts_rank_cd`) calculates relevance based on matching lexeme frequency and phrase proximity within the chunk text.
+- **Why this decision was made:** Storing `search_vector` as a PostgreSQL generated column ensures automatic database-level synchronization whenever chunks are inserted or modified. The GIN index provides logarithmic inverted-index lookup. Using `websearch_to_tsquery` provides modern search bar query semantics (quoted phrases, negation, AND/OR logic) without throwing syntax exceptions on punctuation or arbitrary user inputs. Bounding `top_k` to `[1, 20]` with default `5` protects memory and adheres to platform conventions. Exposing `keyword_rank` separately from semantic similarity preserves transparent metric provenance. Strict contract scoping (`DocumentChunk.contract_id == contract_id`) ensures complete tenant and contract isolation.
+- **Alternatives considered:** On-the-fly `to_tsvector` without a persistent column or GIN index; external search engine (Elasticsearch, OpenSearch); combined vector + keyword retrieval (deferred to Phase 5C).
+- **Why alternatives were rejected:** On-the-fly `to_tsvector` requires sequential table scans for every search, degrading at scale. External search engines introduce operational complexity and break Rule 2 / Rule 10 (prefer simple, explainable architecture). Combining retrieval paths prematurely violates phase decoupling.
+- **Consequences / Trade-offs:** Pure keyword search requires lexical overlap and does not capture semantic paraphrasing (which is covered by Phase 5A). Reciprocal Rank Fusion in Phase 5C will combine both complementary retrieval paths.
+- **Phase:** Phase 5B
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
@@ -224,7 +235,7 @@ The following architectural decisions have **not yet been made** and will be for
 
 ### DEC-012: Hybrid Search & Reranking Architecture
 - **Status:** **Not decided yet.**
-- **Candidates:** PostgreSQL `tsvector` (BM25/Full-text search) + `pgvector` cosine similarity, combined via Reciprocal Rank Fusion (RRF); optional cross-encoder reranker (e.g. Cohere rerank or `bge-reranker`).
+- **Candidates:** PostgreSQL Full-Text Search (`tsvector`/`tsquery`) + `pgvector` cosine similarity, combined via Reciprocal Rank Fusion (RRF); optional cross-encoder reranker (e.g. Cohere rerank or `bge-reranker`).
 - **Considerations:** Exact keyword matching (dates, dollar figures, specific parties) is critical in contracts where pure vector search fails.
 
 ### DEC-013: Structured Output Schema & Extraction Technique

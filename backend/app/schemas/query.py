@@ -97,3 +97,75 @@ class ContractQueryResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContractKeywordQueryRequest(BaseModel):
+    """Request payload for keyword full-text search within a contract."""
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Search query for keyword full-text retrieval",
+        examples=["indemnification liability notice"],
+    )
+    top_k: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum number of nearest document chunks to return (1-20)",
+        examples=[5],
+    )
+
+    @field_validator("query")
+    @classmethod
+    def query_must_not_be_whitespace(cls, v: str) -> str:
+        """Reject empty or whitespace-only query strings."""
+        if not v or not v.strip():
+            raise ValueError("Query text must not be empty or whitespace only.")
+        return v.strip()
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KeywordChunkMatch(BaseModel):
+    """A single document chunk match returned by keyword full-text search."""
+
+    id: uuid.UUID = Field(..., description="Unique chunk identifier")
+    contract_id: uuid.UUID = Field(..., description="Parent contract UUID")
+    page_number: int = Field(..., description="1-indexed source PDF page number")
+    chunk_index: int = Field(..., description="0-indexed global chunk sequence index")
+    section_header: Optional[str] = Field(
+        default=None,
+        description="Nearest governing section heading above this chunk",
+    )
+    text: str = Field(..., description="Verbatim text content of the chunk")
+    char_start: Optional[int] = Field(
+        default=None,
+        description="Start character offset within the normalized page text",
+    )
+    char_end: Optional[int] = Field(
+        default=None,
+        description="End character offset within the normalized page text",
+    )
+    keyword_rank: float = Field(
+        ...,
+        description="PostgreSQL Full-Text Search relevance score calculated via ts_rank_cd",
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContractKeywordQueryResponse(BaseModel):
+    """Response payload for keyword full-text search."""
+
+    contract_id: uuid.UUID = Field(..., description="UUID of the searched contract")
+    query: str = Field(..., description="Original query string")
+    total_matches: int = Field(..., ge=0, description="Total number of matches returned")
+    top_k: int = Field(..., ge=1, le=20, description="Requested top_k limit")
+    matches: list[KeywordChunkMatch] = Field(
+        default_factory=list,
+        description="Ranked list of matching document chunks ordered by keyword relevance descending",
+    )
+
+    model_config = ConfigDict(from_attributes=True)

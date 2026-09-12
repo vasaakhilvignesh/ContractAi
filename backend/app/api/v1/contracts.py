@@ -39,6 +39,8 @@ from app.schemas.embedding import (
 from app.schemas.query import (
     ContractQueryRequest,
     ContractQueryResponse,
+    ContractKeywordQueryRequest,
+    ContractKeywordQueryResponse,
 )
 from app.services import (
     contract_service,
@@ -47,6 +49,7 @@ from app.services import (
     chunking_service,
     embedding_generation_service,
     retrieval_service,
+    keyword_retrieval_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -759,4 +762,45 @@ async def query_contract(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during semantic retrieval: {exc}",
+        )
+
+
+@router.post(
+    "/{contract_id}/keyword-query",
+    response_model=ContractKeywordQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Keyword full-text retrieval for contract chunks",
+    description=(
+        "Executes a PostgreSQL Full-Text Search query (websearch_to_tsquery) against the contract's "
+        "document chunks using cover density ranking (ts_rank_cd), returning ranked KeywordChunkMatch "
+        "results ordered by relevance descending. Strictly contract-scoped, no embeddings returned."
+    ),
+)
+async def query_contract_keywords(
+    contract_id: uuid.UUID,
+    payload: ContractKeywordQueryRequest,
+    db: Session = Depends(get_db),
+) -> ContractKeywordQueryResponse:
+    """Execute keyword full-text retrieval for contract chunks."""
+    try:
+        return await keyword_retrieval_service.query_contract_keywords(
+            db=db,
+            contract_id=contract_id,
+            query=payload.query,
+            top_k=payload.top_k,
+        )
+    except keyword_retrieval_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except keyword_retrieval_service.KeywordRetrievalError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Keyword retrieval failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during keyword retrieval: {exc}",
         )

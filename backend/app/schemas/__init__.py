@@ -40,6 +40,9 @@ from app.schemas.query import (
     ContractQueryRequest,
     ChunkMatch,
     ContractQueryResponse,
+    ContractKeywordQueryRequest,
+    KeywordChunkMatch,
+    ContractKeywordQueryResponse,
 )
 
 __all__ = [
@@ -69,6 +72,9 @@ __all__ = [
     "ContractQueryRequest",
     "ChunkMatch",
     "ContractQueryResponse",
+    "ContractKeywordQueryRequest",
+    "KeywordChunkMatch",
+    "ContractKeywordQueryResponse",
 ]
 
 

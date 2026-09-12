@@ -73,6 +73,11 @@ from app.services.retrieval_service import (
     query_contract_chunks,
 )
 
+from app.services.keyword_retrieval_service import (
+    KeywordRetrievalError,
+    query_contract_keywords,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -120,6 +125,8 @@ __all__ = [
     "RetrievalError",
     "NoEmbeddedChunksError",
     "query_contract_chunks",
+    "KeywordRetrievalError",
+    "query_contract_keywords",
 ]
 
 

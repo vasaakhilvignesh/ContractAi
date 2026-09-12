@@ -26,8 +26,8 @@ Key design decisions:
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Computed, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 try:
@@ -139,11 +139,16 @@ class DocumentChunk(Base):
     )
 
     # ----------------------------------------------------------------
-    # Full-Text Search (Phase 3+)
+    # Full-Text Search (Phase 5B)
     # ----------------------------------------------------------------
-    # tsvector for keyword/BM25 search is best maintained as a
-    # generated column in PostgreSQL; it is added via a raw SQL migration
-    # in Phase 3 rather than declared here to keep the ORM model clean.
+    # Stored generated tsvector column derived from chunk text.
+    # Indexed with GIN (idx_document_chunks_search_vector_gin) for fast keyword search.
+    search_vector: Mapped[object | None] = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('english', text)", persisted=True),
+        nullable=True,
+        comment="PostgreSQL tsvector generated automatically from chunk text for full-text search",
+    )
 
     # ----------------------------------------------------------------
     # Timestamps
