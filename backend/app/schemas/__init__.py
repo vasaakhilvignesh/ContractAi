@@ -36,6 +36,12 @@ from app.schemas.embedding import (
     ContractEmbeddingResponse,
 )
 
+from app.schemas.query import (
+    ContractQueryRequest,
+    ChunkMatch,
+    ContractQueryResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -60,6 +66,9 @@ __all__ = [
     "DocumentChunkSummary",
     "ContractEmbedRequest",
     "ContractEmbeddingResponse",
+    "ContractQueryRequest",
+    "ChunkMatch",
+    "ContractQueryResponse",
 ]
 
 

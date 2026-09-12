@@ -67,6 +67,12 @@ from app.services.embedding_generation_service import (
     generate_contract_embeddings,
 )
 
+from app.services.retrieval_service import (
+    RetrievalError,
+    NoEmbeddedChunksError,
+    query_contract_chunks,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -111,6 +117,9 @@ __all__ = [
     "ContractNotFoundError",
     "NoChunksFoundError",
     "generate_contract_embeddings",
+    "RetrievalError",
+    "NoEmbeddedChunksError",
+    "query_contract_chunks",
 ]
 
 

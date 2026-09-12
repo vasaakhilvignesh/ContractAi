@@ -127,13 +127,15 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── POST   /contracts/{contract_id}/extract           (safely load PDF, extract page text & blocks, update page_count)
    │         ├── POST   /contracts/{contract_id}/chunk             (normalize text, clause-aware chunking, persist to DocumentChunk)
    │         ├── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
-   │         └── POST   /contracts/{contract_id}/embed             (generate & persist 768-dim vector embeddings for chunks)
+   │         ├── POST   /contracts/{contract_id}/embed             (generate & persist 768-dim vector embeddings for chunks)
+   │         └── POST   /contracts/{contract_id}/query             (semantic vector retrieval using pgvector cosine distance)
    │
-   ├── Embedding Provider & Generation Layer (`backend/app/services/`):
+   ├── Embedding & Retrieval Layer (`backend/app/services/`):
    │    ├── EmbeddingProvider (ABC with embed_texts & embed_query; RETRIEVAL_DOCUMENT & RETRIEVAL_QUERY task types)
    │    ├── GeminiEmbeddingProvider (Google Gemini gemini-embedding-2, 768 dims, order preservation, batching)
    │    ├── get_embedding_provider (Factory function for provider instantiation)
-   │    └── embedding_generation_service (Atomic persistence, idempotency filtering, 768-dim validation)
+   │    ├── embedding_generation_service (Atomic persistence, idempotency filtering, 768-dim validation)
+   │    └── retrieval_service (Contract-scoped pgvector cosine similarity search, top-k ranking, threshold filtering)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
@@ -244,9 +246,15 @@ Contract PDF Upload
 
 ---
 
-### 3. RAG Retrieval & Question Answering Flow
+### 3. Retrieval & Question Answering Flow
 
-When a user asks a contract question (e.g. *"What is the notice period for early termination?"*):
+The retrieval engine is implemented in structured sub-phases:
+- **Phase 5A (IMPLEMENTED):** Semantic vector retrieval (`pgvector` cosine similarity over `DocumentChunk.embedding`).
+- **Phase 5B (PLANNED):** Keyword full-text retrieval (`tsvector` / BM25).
+- **Phase 5C (PLANNED):** Hybrid retrieval fusion (Reciprocal Rank Fusion - RRF) + context boundary filtering.
+- **Phase 5D (PLANNED):** Formal retrieval-quality evaluation.
+
+When a user searches or queries a contract:
 
 ```
 User Query: "What is the notice period for early termination?"
@@ -254,11 +262,11 @@ User Query: "What is the notice period for early termination?"
    ▼
 Backend Retrieval Orchestrator
    │
-   ├── Vector Search (pgvector cosine distance for semantic similarity)
-   └── Keyword Search (PostgreSQL tsvector / BM25 for exact terms)
+   ├── Vector Search (Phase 5A — IMPLEMENTED: pgvector cosine distance <=> for semantic similarity)
+   └── Keyword Search (Phase 5B — PLANNED: PostgreSQL tsvector / BM25 for exact terms)
    │
    ▼
-Hybrid Retrieval Fusion (Reciprocal Rank Fusion - RRF)
+Hybrid Retrieval Fusion (Phase 5C — PLANNED: Reciprocal Rank Fusion - RRF)
    │
    ▼
 Reranker / Context Filtering

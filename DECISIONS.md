@@ -201,6 +201,16 @@ Format for each record:
 - **Phase:** Phase 4C
 - **Date:** 2026-09-12
 
+### DEC-025: Semantic Vector Retrieval Engine (pgvector Cosine Similarity Search)
+- **Decision:** Implement contract-scoped semantic vector retrieval (`retrieval_service.py`) using existing `EmbeddingProvider.embed_query()` (`gemini-embedding-2`, `RETRIEVAL_QUERY`, 768 dimensions), executing pgvector cosine distance queries (`<=>`, `order_by(distance.asc()).limit(top_k)`), mapping raw cosine distance to exact similarity score (`similarity_score = 1.0 - distance`), supporting optional `min_similarity` filtering, and exposing REST endpoints `POST /contracts/{contract_id}/query` and `/api/v1/contracts/{contract_id}/query`.
+- **Context:** Phase 5A requires implementing semantic vector retrieval against indexed contract chunks ahead of keyword retrieval (Phase 5B) and hybrid RRF fusion (Phase 5C).
+- **Why this decision was made:** Reusing the Phase 4A `EmbeddingProvider` abstraction guarantees identical vector spaces and avoids duplicating Gemini SDK clients. Utilizing pgvector's `<=>` operator leverages the Phase 4C HNSW index (`vector_cosine_ops`). Bounding `top_k` to `[1, 20]` with default `5` protects memory while supplying sufficient chunk evidence for downstream review. Filtering `DocumentChunk.embedding.is_not(None)` prevents NULL distance evaluation errors. Strict contract scoping (`DocumentChunk.contract_id == contract_id`) prevents cross-tenant or cross-contract evidence leakage.
+- **Alternatives considered:** Keyword-only search; client-side embedding generation; premature RAG/LLM synthesis in Phase 5A.
+- **Why alternatives were rejected:** Keyword search fails on semantic paraphrasing (addressed in Phase 5B). Client-side embeddings leak API keys to browsers. Generating answers or citations violates Phase 5A scope boundaries (Rule 12: RAG finds evidence; synthesis is deferred to Phase 5C).
+- **Consequences / Trade-offs:** Pure vector retrieval can miss exact keyword codes or acronyms; this is an accepted intermediate state resolved by hybrid search and RRF in Phase 5B.
+- **Phase:** Phase 5A
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

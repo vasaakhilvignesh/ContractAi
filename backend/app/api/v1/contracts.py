@@ -36,12 +36,17 @@ from app.schemas.embedding import (
     ContractEmbedRequest,
     ContractEmbeddingResponse,
 )
+from app.schemas.query import (
+    ContractQueryRequest,
+    ContractQueryResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
     pdf_extraction_service,
     chunking_service,
     embedding_generation_service,
+    retrieval_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -705,5 +710,53 @@ async def embed_contract(
         )
 
 
-
-
+@router.post(
+    "/{contract_id}/query",
+    response_model=ContractQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Semantic vector retrieval for contract chunks",
+    description=(
+        "Embeds the search query using Gemini (gemini-embedding-2) with RETRIEVAL_QUERY "
+        "and executes a pgvector cosine similarity search (<=>) against the contract's 768-dimensional "
+        "chunk embeddings, returning ranked ChunkMatch results ordered by similarity descending."
+    ),
+)
+async def query_contract(
+    contract_id: uuid.UUID,
+    payload: ContractQueryRequest,
+    db: Session = Depends(get_db),
+) -> ContractQueryResponse:
+    """Execute semantic vector retrieval for contract chunks."""
+    try:
+        return await retrieval_service.query_contract_chunks(
+            db=db,
+            contract_id=contract_id,
+            query=payload.query,
+            top_k=payload.top_k,
+            min_similarity=payload.min_similarity,
+        )
+    except retrieval_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except (retrieval_service.NoChunksFoundError, retrieval_service.NoEmbeddedChunksError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except EmbeddingConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Embedding provider configuration error: {exc}",
+        )
+    except (EmbeddingProviderError, retrieval_service.RetrievalError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Semantic retrieval failed during provider call: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during semantic retrieval: {exc}",
+        )

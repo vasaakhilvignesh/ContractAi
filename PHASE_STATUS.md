@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 4C: Vector Column Typing, Indexing & Retrieval Preparation** |
+| **Current Phase** | **Phase 5A: Semantic Vector Retrieval Engine** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 176 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `827a20c` ("feat: add contract embedding generation") |
+| **Last Verified State** | Backend: 194 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `296ed75` ("feat: add typed vector schema and hnsw index") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 5A: Semantic Vector Retrieval Engine** |
-| **Exact Next Action** | Implement query embedding generation, cosine similarity search service, top-k retrieval, and relevance filtering. |
+| **Next Phase** | **Phase 5B: Keyword Full-Text Retrieval Engine** |
+| **Exact Next Action** | Implement PostgreSQL tsvector column, BM25/full-text search service, and contract-scoped keyword retrieval. |
 
 ---
 
@@ -125,12 +125,19 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] All 176 backend tests passing against live Neon PostgreSQL (100% pass rate).
   - [x] Semantic retrieval strictly deferred to Phase 5A; zero search or retrieval endpoints introduced.
 - [ ] **Phase 5: Hybrid Search & Semantic Retrieval Engine**
-  - [ ] Keyword full-text search implementation (tsvector / BM25).
-  - [ ] Semantic vector search implementation (pgvector cosine similarity).
-  - [ ] Hybrid retrieval fusion (Reciprocal Rank Fusion - RRF).
-  - [ ] Top-K reranking and context boundary pruning.
-  - [ ] Grounded question-answering prompt engineering with verifiable page citations.
-  - [ ] Fallback "evidence not found" response handling when confidence is below threshold.
+  - [x] **Phase 5A: Semantic Vector Retrieval Engine** *(Completed)*
+    - [x] Defined strongly typed Pydantic v2 schemas (`ContractQueryRequest`, `ChunkMatch`, `ContractQueryResponse`).
+    - [x] Reused `EmbeddingProvider.embed_query()` with `task_type=RETRIEVAL_QUERY` producing 768-dim query vectors.
+    - [x] Built standalone `retrieval_service.py` with `query_contract_chunks()` executing pgvector cosine distance queries (`<=>`).
+    - [x] Exact mathematical mapping: `similarity_score = 1.0 - cosine_distance`.
+    - [x] Enforced strict contract scoping (`DocumentChunk.contract_id == contract_id`) and NULL embedding exclusion.
+    - [x] Bounded `top_k` (`ge=1, le=20`, default `5`) and optional `min_similarity` filtering.
+    - [x] REST API endpoints `POST /contracts/{contract_id}/query` and `/api/v1/contracts/{contract_id}/query`.
+    - [x] 18 comprehensive unit and integration tests in `backend/tests/test_vector_retrieval.py` (100% mocked, 0 real Gemini API calls).
+    - [x] Zero database migrations, zero schema changes, zero premature background queues.
+  - [ ] **Phase 5B: Keyword Full-Text Retrieval Engine** *(PLANNED)*
+  - [ ] **Phase 5C: Hybrid Retrieval Fusion & RRF** *(PLANNED)*
+  - [ ] **Phase 5D: Retrieval Evaluation & Benchmarking** *(PLANNED)*
 - [ ] **Phase 4: Structured Extraction & Deterministic Risk Rules Engine**
   - [ ] Structured extraction schema for clauses (Renewal, Termination, Liability, Indemnification).
   - [ ] Structured obligation extraction (responsible party, due date, frequency, source clause).
@@ -212,6 +219,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 4C) | `pytest tests/ -v` | **PASSED** (176 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 4C Check) | `npm run build` | **PASSED** (built in 213ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 4C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 5A Vector Retrieval Tests | `pytest tests/test_vector_retrieval.py -v` | **PASSED** (18 passed, 0 skipped, 100% mocked) |
+| 2026-09-12 | Python Bytecode Compilation (Phase 5A) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-12 | Frontend Build (Phase 5A Check) | `npm run build` | **PASSED** (built in 449ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 5A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

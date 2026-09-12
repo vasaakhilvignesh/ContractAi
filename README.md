@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 4C Complete (Vector Column Typing & HNSW Indexing Verified)  
+> **Status:** Phase 5A Complete (Semantic Vector Retrieval Engine Verified)
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
@@ -150,7 +150,7 @@ pytest tests/ -v
 # Run FastAPI backend development server (http://localhost:8000)
 uvicorn app.main:app --reload --port 8000
 ```
-API Documentation will be available at `http://localhost:8000/docs`.  
+API Documentation will be available at `http://localhost:8000/docs`.
 System and database health check is available at `http://localhost:8000/health`.
 
 ---
