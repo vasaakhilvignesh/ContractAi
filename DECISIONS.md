@@ -232,6 +232,16 @@ Format for each record:
 - **Phase:** Phase 5C
 - **Date:** 2026-09-12
 
+### DEC-028: Deterministic Retrieval Evaluation Framework & Benchmarking Methodology
+- **Decision:** Implement an offline, deterministic retrieval evaluation framework (`app.evaluation`) calculating standard Information Retrieval metrics (Precision@K, Recall@K, and MRR@K) across all three retrieval methods (semantic, keyword, and hybrid). Store a version-controlled benchmark dataset in JSON (`retrieval_eval_dataset.json`) containing realistic enterprise contract chunks, multi-class queries (semantic, keyword, hybrid), and ground-truth relevant chunk IDs. Execute evaluation using fixed orthogonal unit vectors via `MockEvalEmbeddingProvider`, guaranteeing 100% deterministic, zero-cost, zero-API-dependency test execution in CI/CD.
+- **Context:** Phase 5 requires empirical verification and measurable quality metrics comparing semantic, keyword, and hybrid retrieval before proceeding to downstream RAG and structured extraction.
+- **Why this decision was made:** Precision@K, Recall@K, and MRR@K are the established standards in information retrieval science. Evaluating all three methods on the same query set demonstrates the clear superiority of hybrid retrieval over standalone keyword or semantic approaches on diverse query distributions. Using deterministic orthogonal vectors isolates the retrieval logic from LLM embedding API variance and guarantees reproducible CI/CD verification.
+- **Alternatives considered:** Live LLM-as-a-judge evaluation (RAGAS / TruLens); manual ad-hoc query testing; vector-only benchmarking.
+- **Why alternatives were rejected:** LLM-as-a-judge introduces nondeterministic scoring, API rate limit exposure, and high token costs. Ad-hoc testing lacks regression protection and quantitative metrics.
+- **Consequences / Trade-offs:** Evaluation assesses the ranking and fusion pipeline; updating the benchmark requires curating ground-truth query-chunk references in the version-controlled JSON dataset.
+- **Phase:** Phase 5D
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

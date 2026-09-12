@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 5C: Hybrid Retrieval Fusion & RRF** |
+| **Current Phase** | **Phase 5D: Retrieval Evaluation & Benchmarking** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 22 passed (`test_hybrid_retrieval.py`), 14 passed (`test_keyword_retrieval.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `c6594f9` ("feat: add keyword retrieval") |
+| **Last Verified State** | Backend: 10 passed (`test_retrieval_evaluation.py`), 22 passed (`test_hybrid_retrieval.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `5ebc21f` ("feat: add hybrid retrieval with rrf") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 5D: Retrieval Evaluation & Benchmarking** |
-| **Exact Next Action** | Implement retrieval quality evaluation suite (MRR, NDCG@k, Precision@k) against ground-truth contract queries. |
+| **Next Phase** | **Phase 4: Structured Extraction & Deterministic Risk Rules Engine** |
+| **Exact Next Action** | Implement structured extraction schemas and deterministic risk evaluation rules for contracts. |
 
 ---
 
@@ -159,7 +159,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] REST API endpoints `POST /contracts/{contract_id}/hybrid-query` and `/api/v1/contracts/{contract_id}/hybrid-query`.
     - [x] 22 comprehensive unit, integration, and API tests in `backend/tests/test_hybrid_retrieval.py` (100% pass rate).
     - [x] Verified zero regressions on Phase 5A vector retrieval and Phase 5B keyword retrieval endpoints.
-  - [ ] **Phase 5D: Retrieval Evaluation & Benchmarking** *(PLANNED)*
+  - [x] **Phase 5D: Retrieval Evaluation & Benchmarking** *(Completed)*
+    - [x] Implemented standard IR ranking metrics (`backend/app/evaluation/metrics.py`): Precision@K, Recall@K, and MRR@K.
+    - [x] Version-controlled benchmark dataset in JSON (`backend/app/evaluation/data/retrieval_eval_dataset.json`) with enterprise MSA chunks and test queries.
+    - [x] Strongly typed Pydantic dataset schemas and loader (`backend/app/evaluation/dataset.py`).
+    - [x] Deterministic evaluation runner (`backend/app/evaluation/evaluator.py`) benchmarking semantic, keyword, and hybrid retrieval paths without live Gemini API calls using orthogonal unit vectors.
+    - [x] Multi-cutoff evaluation ($K \in [1, 3, 5]$) and audit-ready markdown summary reporting.
+    - [x] 10 unit and integration tests in `backend/tests/test_retrieval_evaluation.py` (100% pass rate).
 - [ ] **Phase 4: Structured Extraction & Deterministic Risk Rules Engine**
   - [ ] Structured extraction schema for clauses (Renewal, Termination, Liability, Indemnification).
   - [ ] Structured obligation extraction (responsible party, due date, frequency, source clause).
@@ -256,3 +262,7 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Python Bytecode Compilation (Phase 5C) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-12 | Frontend Build (Phase 5C Check) | `npm run build` | **PASSED** (built in 579ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 5C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 5D Retrieval Evaluation Tests | `pytest tests/test_retrieval_evaluation.py -v` | **PASSED** (10 passed, 0 skipped, 100% deterministic) |
+| 2026-09-12 | Python Bytecode Compilation (Phase 5D) | `python -m compileall app/evaluation` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-12 | Frontend Build (Phase 5D Check) | `npm run build` | **PASSED** (built in 487ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 5D Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
