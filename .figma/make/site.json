@@ -1,0 +1,10 @@
+{
+  "description": "Transforms contracts into searchable, structured intelligence with risk analysis, obligation tracking, and evidence-backed insights for enterprise users.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
