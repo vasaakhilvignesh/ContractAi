@@ -48,6 +48,18 @@ from app.services.chunking_service import (
     list_contract_chunks,
 )
 
+from app.services.embedding_provider import (
+    EmbeddingProvider,
+    EmbeddingTaskType,
+    EmbeddingError,
+    EmbeddingConfigurationError,
+    EmbeddingValidationError,
+    EmbeddingProviderError,
+)
+
+from app.services.gemini_embedding_provider import GeminiEmbeddingProvider
+from app.services.embedding_factory import get_embedding_provider
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -80,6 +92,14 @@ __all__ = [
     "chunk_extraction_result",
     "persist_contract_chunks",
     "list_contract_chunks",
+    "EmbeddingProvider",
+    "EmbeddingTaskType",
+    "EmbeddingError",
+    "EmbeddingConfigurationError",
+    "EmbeddingValidationError",
+    "EmbeddingProviderError",
+    "GeminiEmbeddingProvider",
+    "get_embedding_provider",
 ]
 
 

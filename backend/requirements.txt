@@ -33,3 +33,6 @@ httpx==0.28.0   # ASGI test client for FastAPI
 # --- Document Processing: PDF Extraction (Phase 3A) ---
 pymupdf==1.28.2
 
+# --- Embeddings & LLM (Phase 4A) ---
+google-genai==2.23.0
+

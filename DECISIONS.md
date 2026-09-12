@@ -171,16 +171,21 @@ Format for each record:
 - **Phase:** Phase 3B
 - **Date:** 2026-09-12
 
+### DEC-010: Embedding Model & Provider Abstraction
+- **Decision:** Google Gemini `gemini-embedding-2` with 768 output dimensions, cosine similarity, task types `RETRIEVAL_DOCUMENT` (document chunks) and `RETRIEVAL_QUERY` (search queries), accessed via official `google-genai==2.23.0` through an `EmbeddingProvider` abstraction with guaranteed $N \to N$ ordering and safe batching.
+- **Context:** Phase 4A requires selecting and integrating an embedding model to compute dense vector representations for contract document chunks and future search queries.
+- **Why this decision was made:** `gemini-embedding-2` provides state-of-the-art semantic representation, natively supports flexible output dimensionality (configured to 768 dimensions), and supports specialized task types (`RETRIEVAL_DOCUMENT` for chunk indexing, `RETRIEVAL_QUERY` for search queries) optimizing cosine distance retrieval. Using the official `google-genai` SDK unifies upstream Google AI tools and avoids obsolete embedding models like `text-embedding-004`. The `EmbeddingProvider` abstraction decouples business logic from upstream provider details and strictly preserves $N \to N$ input-to-output ordering.
+- **Alternatives considered:** OpenAI `text-embedding-3-small`, Google `text-embedding-004` (obsolete), local HuggingFace `sentence-transformers` (e.g. `bge-small-en-v1.5`).
+- **Why alternatives were rejected:** `text-embedding-004` is obsolete. Local sentence-transformers require PyTorch/transformers dependencies (~2GB+ wheels) that violate Rule 2 and Rule 10 for serverless deployments. OpenAI adds an additional vendor dependency when Gemini is the target AI platform.
+- **Consequences / Trade-offs:** Requires `GEMINI_API_KEY` for live production embedding. Local unit tests use 100% mocked SDK calls to allow CI/offline execution. Chunks are embedded in batches of 100 to avoid API rate limits while strictly preserving sequential order. Schema migration for vector dimension constraint is deferred to database migration phase per Phase 4A scope constraints.
+- **Phase:** Phase 4A
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
 The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
-
-### DEC-010: Embedding Model
-- **Status:** **Not decided yet.**
-- **Candidates:** OpenAI `text-embedding-3-small`, Google Gemini embeddings (`text-embedding-004`), open-source HuggingFace sentence-transformers (e.g., `BAAI/bge-small-en-v1.5`).
-- **Considerations:** Cost, latency, dimension size, and legal domain retrieval accuracy.
 
 ### DEC-011: LLM Provider for Extraction & Analysis
 - **Status:** **Not decided yet.**

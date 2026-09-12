@@ -128,6 +128,11 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── POST   /contracts/{contract_id}/chunk             (normalize text, clause-aware chunking, persist to DocumentChunk)
    │         └── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
    │
+   ├── Embedding Provider Layer (`backend/app/services/`):
+   │    ├── EmbeddingProvider (ABC with embed_texts & embed_query; RETRIEVAL_DOCUMENT & RETRIEVAL_QUERY task types)
+   │    ├── GeminiEmbeddingProvider (Google Gemini gemini-embedding-2, 768 dims, order preservation, batching)
+   │    └── get_embedding_provider (Factory function for provider instantiation)
+   │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
    ├── User             (Auth root, tenant anchor)
@@ -215,8 +220,10 @@ Contract PDF Upload
    │ (Conservative normalization, clause-aware chunking with page lineage & DocumentChunk persistence)
    │ [Lineage Flow: ExtractionResult → Normalization → Clause-Aware Chunking → DocumentChunk]
    ▼
-4. Embedding Generation
-   │ (Compute dense vectors for all chunks via embedding model)
+4. Embedding Generation (Phase 4A Provider Abstraction — IMPLEMENTED)
+   │ (EmbeddingProvider abstraction using gemini-embedding-2 with 768 dimensions;
+   │  guarantees N inputs -> N outputs with preserved ordering;
+   │  Phase 4B will ingest dense vectors into DocumentChunk.embedding)
    ▼
 5. Dual Indexing in PostgreSQL
    ├── Vector Index: Chunks & embeddings inserted into pgvector

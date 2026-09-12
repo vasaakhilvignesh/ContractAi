@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline** |
+| **Current Phase** | **Phase 4A: Embedding Provider Abstraction** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 132 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `73ab58d` ("feat: add pdf text extraction") |
+| **Last Verified State** | Backend: 155 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `5e8cd6d` ("feat: add text normalization and clause-aware chunking") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 4A: Embedding Provider & pgvector Ingestion** |
-| **Exact Next Action** | Commence Phase 4A (Dense embedding provider selection, vector generation, and pgvector insertion). |
+| **Next Phase** | **Phase 4B: Document Chunk Embedding & pgvector Persistence** |
+| **Exact Next Action** | Generate dense embeddings for document chunks and persist 768-dim vectors to Neon PostgreSQL. |
 
 ---
 
@@ -95,9 +95,19 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] REST API endpoints `POST /contracts/{id}/chunk` and `GET /contracts/{id}/chunks` with `/api/v1` versioned aliases.
     - [x] Zero database migrations required; fully compatible with initial schema.
     - [x] 32 comprehensive unit and integration tests in `backend/tests/test_chunking.py` (132 total backend tests passing).
-  - [ ] **Phase 4A: Embedding Provider & pgvector Ingestion**
-    - [ ] Integration of embedding model to generate dense vectors.
-    - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
+- [x] **Phase 4A: Embedding Provider Abstraction** *(Completed)*
+  - [x] Pinned modern, compatible dependency: `google-genai==2.23.0` in `backend/requirements.txt`.
+  - [x] Extended `Settings` safely with `gemini_api_key`, `embedding_model="gemini-embedding-2"`, `embedding_dimension=768`, and `embedding_batch_size=100`.
+  - [x] Implemented credential hygiene with masked summary property (`safe_gemini_key_summary`), preventing raw secrets or API keys in logs/exceptions.
+  - [x] Implemented `EmbeddingProvider` abstract base class and `EmbeddingTaskType` enum (`RETRIEVAL_DOCUMENT`, `RETRIEVAL_QUERY`).
+  - [x] Implemented concrete `GeminiEmbeddingProvider` using official `google.genai` SDK with `output_dimensionality=768`.
+  - [x] Built `get_embedding_provider` factory for clean, interview-defensible dependency injection.
+  - [x] Enforced strict input/output validation, sequential batching (default 100 items), and $N \to N$ ordering preservation.
+  - [x] Implemented 23 comprehensive mocked unit tests in `backend/tests/test_embedding_provider.py` (100% mocked, 0 real API calls, 0 secrets).
+  - [x] Zero database migrations, zero schema changes, zero premature background queues.
+- [ ] **Phase 4B: Document Chunk Embedding & pgvector Persistence**
+  - [ ] Batch generation of dense vectors for contract chunks via `EmbeddingProvider`.
+  - [ ] Persistence of 768-dim embeddings into `DocumentChunk.embedding` column.
 - [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
   - [ ] Keyword full-text search implementation (tsvector / BM25).
   - [ ] Semantic vector search implementation (pgvector cosine similarity).
@@ -172,6 +182,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 3B) | `pytest tests/ -v` | **PASSED** (132 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 3B Check) | `npm run build` | **PASSED** (built in 427ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 3B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 4A Embedding Provider Tests | `pytest tests/test_embedding_provider.py -v` | **PASSED** (23 passed, 0 skipped, 100% mocked) |
+| 2026-09-12 | Full Suite Verification (Phase 4A) | `pytest tests/ -v` | **PASSED** (155 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 4A Check) | `npm run build` | **PASSED** (built in 448ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 4A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

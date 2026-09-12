@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     allowed_upload_extensions: list[str] = [".pdf"]
     max_pdf_pages: int = 250  # Defensive maximum page count for extraction
 
+    # ----------------------------------------------------------------
+    # Embedding Provider (Phase 4A — Google Gemini)
+    # ----------------------------------------------------------------
+    gemini_api_key: str = ""
+    embedding_provider: str = "gemini"
+    embedding_model: str = "gemini-embedding-2"
+    embedding_dimension: int = 768
+    embedding_batch_size: int = 100
+
 
 
     @field_validator("database_url")
@@ -62,6 +71,11 @@ class Settings(BaseSettings):
     def is_database_configured(self) -> bool:
         """Returns True if DATABASE_URL has been provided and is non-empty."""
         return bool(self.database_url and self.database_url.strip())
+
+    @property
+    def is_gemini_configured(self) -> bool:
+        """Returns True if GEMINI_API_KEY has been provided and is non-empty."""
+        return bool(self.gemini_api_key and self.gemini_api_key.strip())
 
     @property
     def safe_database_url_summary(self) -> str:
@@ -82,6 +96,20 @@ class Settings(BaseSettings):
             )
         except Exception:
             return "<configured — parse error>"
+
+    @property
+    def safe_gemini_key_summary(self) -> str:
+        """
+        Returns a masked summary of the Gemini API key for logging.
+        Never logs the full secret.
+        Example: 'AIza...1234'
+        """
+        if not self.is_gemini_configured:
+            return "<not configured>"
+        key = self.gemini_api_key.strip()
+        if len(key) <= 8:
+            return "***"
+        return f"{key[:4]}...{key[-4:]}"
 
     model_config = {
         "env_file": [str(Path(__file__).resolve().parents[2] / ".env"), ".env"],
