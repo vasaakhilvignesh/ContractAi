@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 4A: Embedding Provider Abstraction** |
+| **Current Phase** | **Phase 4B: Document Chunk Embedding & pgvector Persistence** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 155 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `5e8cd6d` ("feat: add text normalization and clause-aware chunking") |
+| **Last Verified State** | Backend: 168 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `3a11942` ("feat: add embedding provider abstraction") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 4B: Document Chunk Embedding & pgvector Persistence** |
-| **Exact Next Action** | Generate dense embeddings for document chunks and persist 768-dim vectors to Neon PostgreSQL. |
+| **Next Phase** | **Phase 4C: Vector Column Typing, Indexing & Retrieval Preparation** |
+| **Exact Next Action** | Implement Vector(768) type migration, vector index (HNSW/IVFFlat), and semantic retrieval infrastructure. |
 
 ---
 
@@ -105,9 +105,16 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] Enforced strict input/output validation, sequential batching (default 100 items), and $N \to N$ ordering preservation.
   - [x] Implemented 23 comprehensive mocked unit tests in `backend/tests/test_embedding_provider.py` (100% mocked, 0 real API calls, 0 secrets).
   - [x] Zero database migrations, zero schema changes, zero premature background queues.
-- [ ] **Phase 4B: Document Chunk Embedding & pgvector Persistence**
-  - [ ] Batch generation of dense vectors for contract chunks via `EmbeddingProvider`.
-  - [ ] Persistence of 768-dim embeddings into `DocumentChunk.embedding` column.
+- [x] **Phase 4B: Document Chunk Embedding & pgvector Persistence** *(Completed)*
+  - [x] Defined strongly typed Pydantic v2 embedding schemas (`ContractEmbedRequest`, `ContractEmbeddingResponse`).
+  - [x] Built standalone embedding generation service (`embedding_generation_service.py`) using `EmbeddingProvider` and `get_embedding_provider`.
+  - [x] Enforced strict 1-to-1 chunk-to-embedding mapping and index ordering (`order_by(DocumentChunk.chunk_index.asc())`).
+  - [x] Implemented idempotent execution: skips chunks with `embedding IS NOT NULL` when `force_reembed=False`, re-embeds all when `force_reembed=True`.
+  - [x] Strict 768-dimensional output validation prior to persistence.
+  - [x] Atomic persistence: single per-contract commit; automatic `db.rollback()` on provider or validation failure.
+  - [x] REST API endpoints `POST /contracts/{contract_id}/embed` and `/api/v1/contracts/{contract_id}/embed`.
+  - [x] Zero database migrations required; preserves existing schema and untyped `Vector` column.
+  - [x] 13 comprehensive unit/integration tests in `backend/tests/test_embedding_generation.py` (100% mocked, zero real API keys/calls).
 - [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
   - [ ] Keyword full-text search implementation (tsvector / BM25).
   - [ ] Semantic vector search implementation (pgvector cosine similarity).
@@ -186,6 +193,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 4A) | `pytest tests/ -v` | **PASSED** (155 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 4A Check) | `npm run build` | **PASSED** (built in 448ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 4A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 4B Embedding Generation Tests | `pytest tests/test_embedding_generation.py -v` | **PASSED** (13 passed, 0 skipped, 100% mocked) |
+| 2026-09-12 | Full Suite Verification (Phase 4B) | `pytest tests/ -v` | **PASSED** (168 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 4B Check) | `npm run build` | **PASSED** (built in 472ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 4B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

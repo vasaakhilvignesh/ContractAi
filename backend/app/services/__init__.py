@@ -60,6 +60,13 @@ from app.services.embedding_provider import (
 from app.services.gemini_embedding_provider import GeminiEmbeddingProvider
 from app.services.embedding_factory import get_embedding_provider
 
+from app.services.embedding_generation_service import (
+    EmbeddingGenerationError,
+    ContractNotFoundError,
+    NoChunksFoundError,
+    generate_contract_embeddings,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -100,6 +107,10 @@ __all__ = [
     "EmbeddingProviderError",
     "GeminiEmbeddingProvider",
     "get_embedding_provider",
+    "EmbeddingGenerationError",
+    "ContractNotFoundError",
+    "NoChunksFoundError",
+    "generate_contract_embeddings",
 ]
 
 

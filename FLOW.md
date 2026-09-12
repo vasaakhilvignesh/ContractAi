@@ -126,12 +126,14 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── PATCH  /contracts/{contract_id}/processing-status (transition processing lifecycle state)
    │         ├── POST   /contracts/{contract_id}/extract           (safely load PDF, extract page text & blocks, update page_count)
    │         ├── POST   /contracts/{contract_id}/chunk             (normalize text, clause-aware chunking, persist to DocumentChunk)
-   │         └── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
+   │         ├── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
+   │         └── POST   /contracts/{contract_id}/embed             (generate & persist 768-dim vector embeddings for chunks)
    │
-   ├── Embedding Provider Layer (`backend/app/services/`):
+   ├── Embedding Provider & Generation Layer (`backend/app/services/`):
    │    ├── EmbeddingProvider (ABC with embed_texts & embed_query; RETRIEVAL_DOCUMENT & RETRIEVAL_QUERY task types)
    │    ├── GeminiEmbeddingProvider (Google Gemini gemini-embedding-2, 768 dims, order preservation, batching)
-   │    └── get_embedding_provider (Factory function for provider instantiation)
+   │    ├── get_embedding_provider (Factory function for provider instantiation)
+   │    └── embedding_generation_service (Atomic persistence, idempotency filtering, 768-dim validation)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
@@ -220,10 +222,10 @@ Contract PDF Upload
    │ (Conservative normalization, clause-aware chunking with page lineage & DocumentChunk persistence)
    │ [Lineage Flow: ExtractionResult → Normalization → Clause-Aware Chunking → DocumentChunk]
    ▼
-4. Embedding Generation (Phase 4A Provider Abstraction — IMPLEMENTED)
+4. Embedding Generation & Persistence (Phase 4A & 4B — IMPLEMENTED)
    │ (EmbeddingProvider abstraction using gemini-embedding-2 with 768 dimensions;
    │  guarantees N inputs -> N outputs with preserved ordering;
-   │  Phase 4B will ingest dense vectors into DocumentChunk.embedding)
+   │  persists 768-dim dense vectors into DocumentChunk.embedding with idempotency)
    ▼
 5. Dual Indexing in PostgreSQL
    ├── Vector Index: Chunks & embeddings inserted into pgvector

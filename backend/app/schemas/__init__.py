@@ -31,6 +31,11 @@ from app.schemas.chunk import (
     DocumentChunkSummary,
 )
 
+from app.schemas.embedding import (
+    ContractEmbedRequest,
+    ContractEmbeddingResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -53,6 +58,8 @@ __all__ = [
     "ContractChunkingResponse",
     "ContractChunkListResponse",
     "DocumentChunkSummary",
+    "ContractEmbedRequest",
+    "ContractEmbeddingResponse",
 ]
 
 

@@ -181,6 +181,16 @@ Format for each record:
 - **Phase:** Phase 4A
 - **Date:** 2026-09-12
 
+### DEC-023: Contract Chunk Vector Embedding Generation & Persistence
+- **Decision:** Standalone service (`backend/app/services/embedding_generation_service.py`) with `generate_contract_embeddings()`, idempotent chunk filtering (`embedding IS NULL` skipped unless `force_reembed=True`), 768-dimensional validation, atomic per-contract commit with rollback on failure, and REST endpoints `POST /contracts/{contract_id}/embed` and `/api/v1/contracts/{contract_id}/embed`.
+- **Context:** Phase 4B requires generating dense vector representations for persisted `DocumentChunk` records and persisting them into `document_chunks.embedding` in PostgreSQL.
+- **Why this decision was made:** Loading chunks deterministically ordered by `chunk_index.asc()` preserves exact document lineage. Using `EmbeddingProvider.embed_texts()` reuses the Phase 4A batching infrastructure (batches $\le 100$) and enforces `RETRIEVAL_DOCUMENT` task type. Idempotency guarantees zero redundant Gemini API calls on rerun. Single atomic commit per contract guarantees all-or-nothing persistence: if upstream fails, `db.rollback()` leaves the database in a clean, fully retryable state.
+- **Alternatives considered:** Per-batch commit; Celery/Redis background worker; converting entire backend to async SQLAlchemy.
+- **Why alternatives were rejected:** Per-batch commit leaves contracts in a half-embedded, corrupt evidence state. Distributed workers violate Rule 2 and Rule 10 before scale demands it. Converting backend to async SQLAlchemy just for Phase 4B would require rewriting all existing working database services (violating Rule 1).
+- **Consequences / Trade-offs:** Chunks are embedded synchronously during the request; contracts with >500 chunks may take a few seconds. Column remains untyped `Vector(None)` until Phase 4C applies the `Vector(768)` migration.
+- **Phase:** Phase 4B
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

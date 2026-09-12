@@ -32,11 +32,20 @@ from app.schemas.chunk import (
     DocumentChunkSummary,
 )
 from app.schemas.extraction import ContractExtractionResponse
+from app.schemas.embedding import (
+    ContractEmbedRequest,
+    ContractEmbeddingResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
     pdf_extraction_service,
     chunking_service,
+    embedding_generation_service,
+)
+from app.services.embedding_provider import (
+    EmbeddingConfigurationError,
+    EmbeddingProviderError,
 )
 
 
@@ -643,6 +652,57 @@ def list_contract_chunks(
         limit=limit,
         offset=offset,
     )
+
+
+@router.post(
+    "/{contract_id}/embed",
+    response_model=ContractEmbeddingResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate and persist dense vector embeddings for contract chunks",
+    description=(
+        "Retrieves persisted DocumentChunk records for a contract, generates 768-dimensional "
+        "dense vector embeddings using Gemini (gemini-embedding-2) via the embedding provider, "
+        "and atomically persists them to PostgreSQL. Supports idempotent execution."
+    ),
+)
+async def embed_contract(
+    contract_id: uuid.UUID,
+    payload: Optional[ContractEmbedRequest] = None,
+    db: Session = Depends(get_db),
+) -> ContractEmbeddingResponse:
+    """Generate and persist vector embeddings for contract chunks."""
+    force_reembed = payload.force_reembed if payload else False
+    try:
+        return await embedding_generation_service.generate_contract_embeddings(
+            db=db,
+            contract_id=contract_id,
+            force_reembed=force_reembed,
+        )
+    except embedding_generation_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except embedding_generation_service.NoChunksFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except EmbeddingConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Embedding provider configuration error: {exc}",
+        )
+    except (EmbeddingProviderError, embedding_generation_service.EmbeddingGenerationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Embedding generation failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during embedding generation: {exc}",
+        )
 
 
 
