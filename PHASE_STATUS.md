@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 1: Backend Foundation, Data Modeling & Database Setup** |
+| **Current Phase** | **Phase 2A: Contract API Foundation** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 48 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `c8a17ab` ("docs: establish project architecture and phase tracking") |
+| **Last Verified State** | Backend: 60 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `fa22bf2` ("feat: complete phase 1 backend database foundation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 2: PDF Ingestion, Text Extraction & Chunking Engine** |
-| **Exact Next Action** | Await user instruction to commence Phase 2 (PDF ingestion handler, text extraction, clause-aware chunking). |
+| **Next Phase** | **Phase 2B: Contract Upload API** |
+| **Exact Next Action** | Commence Phase 2B (PDF file upload endpoint, file validation, and document storage handler). |
 
 ---
 
@@ -47,11 +47,20 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] All 12 foreign keys and pgvector column verified in Neon database.
   - [x] Live database health check test (`test_health_with_real_db_is_ok`) passed against Neon.
 - [ ] **Phase 2: PDF Ingestion, Text Extraction & Chunking Engine**
-  - [ ] PDF upload handler with file validation and storage.
-  - [ ] Text extraction preserving page numbers, section headers, and tabular data.
-  - [ ] Clause-aware chunking pipeline with page-level lineage metadata.
-  - [ ] Integration of embedding model to generate dense vectors.
-  - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
+  - [x] **Phase 2A: Contract API Foundation** *(Completed)*
+    - [x] Pydantic v2 schemas (`ContractBase`, `ContractCreate`, `ContractUpdate`, `ContractResponse`, `ContractListResponse`).
+    - [x] Contract service layer with data-access operations, attribute filtering, and deterministic pagination.
+    - [x] Contract REST API router mounted at `/contracts` and `/api/v1/contracts` (`POST`, `GET`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`).
+    - [x] 12 comprehensive contract API unit/integration tests covering CRUD, pagination, 404/422 errors against live Neon DB.
+    - [x] Backend test suite passes: 60 passed (48 Phase 1 + 12 Phase 2A).
+    - [x] Zero database migration required; fully compatible with Phase 1 schema.
+  - [ ] **Phase 2B: Contract Upload API & Storage**
+    - [ ] PDF upload handler with file validation (MIME, size) and storage backend.
+  - [ ] **Phase 2C: Text Extraction & Clause Chunking**
+    - [ ] Text extraction preserving page numbers, section headers, and tabular data.
+    - [ ] Clause-aware chunking pipeline with page-level lineage metadata.
+    - [ ] Integration of embedding model to generate dense vectors.
+    - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
 - [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
   - [ ] Keyword full-text search implementation (tsvector / BM25).
   - [ ] Semantic vector search implementation (pgvector cosine similarity).
@@ -106,5 +115,9 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Live Neon Schema Audit | `information_schema.tables` | **PASSED** (all 7 application tables, 12 foreign keys, and vector column verified) |
 | 2026-09-12 | Complete Backend Test Suite | `pytest tests/ -v` | **PASSED** (48 passed, 0 skipped, live DB health test verified) |
 | 2026-09-12 | Git Safety & Secrets Audit | `git check-ignore backend/.env` | **PASSED** (`backend/.env` is untracked & ignored, secrets safe) |
+| 2026-09-12 | Phase 2A Contract API Tests | `pytest tests/test_contracts_api.py -v` | **PASSED** (12 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 2A) | `pytest tests/ -v` | **PASSED** (60 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 2A Check) | `npm run build` | **PASSED** (built in 191ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 2A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 

@@ -119,6 +119,16 @@ Format for each record:
 - **Phase:** Phase 1
 - **Date:** 2026-09-12
 
+### DEC-020: Contract Entity REST API Design & Pagination
+- **Decision:** FastAPI router with separate service layer (`backend/app/services/contract_service.py`), Pydantic v2 schemas (`backend/app/schemas/contract.py`), dual route mounting (`/contracts` and `/api/v1/contracts`), and stable offset/limit pagination with deterministic tie-breaking (`created_at.desc(), id.asc()`).
+- **Context:** Phase 2A requires Contract CRUD and listing operations ahead of document file ingestion and extraction.
+- **Why this decision was made:** Isolating data access in a service layer keeps route handlers clean and simplifies testing. Deterministic sorting guarantees consistent pagination across pages. Dual route mounting preserves backwards compatibility for direct path access and versioned prefixes.
+- **Alternatives considered:** Putting SQL queries directly in route handlers; cursor-based pagination.
+- **Why alternatives were rejected:** Raw queries in handlers violate separation of concerns. Cursor-based pagination adds unnecessary complexity at this scale (Rule 10).
+- **Consequences / Trade-offs:** Offset pagination can be slow on very large tables (millions of records), but is optimal for enterprise contract portfolio sizes (<100k contracts).
+- **Phase:** Phase 2A
+- **Date:** 2026-09-12
+
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
 The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:

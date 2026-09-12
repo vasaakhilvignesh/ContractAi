@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.session import check_database_connection
 from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema
+from app.api.v1.contracts import router as contracts_router
 
 
 # ====================================================================
@@ -105,6 +106,10 @@ def create_app() -> FastAPI:
 def _register_routes(app: FastAPI) -> None:
     """Register all application routes."""
 
+    # Register domain routers
+    app.include_router(contracts_router)
+    app.include_router(contracts_router, prefix="/api/v1")
+
     @app.get(
         "/health",
         response_model=HealthResponseSchema,
@@ -150,9 +155,10 @@ def _register_routes(app: FastAPI) -> None:
     def root() -> dict:
         return {
             "project": "ContractIQ",
-            "phase": "Phase 1 — Backend Foundation",
+            "phase": "Phase 2A — Contract API Foundation",
             "docs": "/docs",
             "health": "/health",
+            "contracts": "/contracts",
         }
 
 
