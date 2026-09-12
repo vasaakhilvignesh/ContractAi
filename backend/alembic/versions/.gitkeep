@@ -1,0 +1,3 @@
+# alembic/versions/ — Alembic auto-generated migration scripts are stored here.
+# This directory is intentionally not committed with migrations pre-applied.
+# Run `alembic revision --autogenerate -m "initial schema"` to generate the first migration.

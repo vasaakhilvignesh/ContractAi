@@ -1,0 +1,30 @@
+# ============================================================
+# ContractIQ Backend — Python Dependencies
+# Phase 1: Backend Foundation + Database Layer
+# ============================================================
+
+# --- Web Framework ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# --- Database: ORM + Driver ---
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10   # PostgreSQL driver (binary wheel — no build deps required)
+
+# --- pgvector: SQLAlchemy integration ---
+pgvector==0.3.6
+
+# --- Migrations ---
+alembic==1.14.0
+
+# --- Environment Configuration ---
+python-dotenv==1.0.1
+
+# --- Validation (FastAPI schemas / Pydantic) ---
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.0   # ASGI test client for FastAPI

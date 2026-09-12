@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 0 (Baseline Audit & Project Memory Established)  
+> **Status:** Phase 1 Complete (Backend Foundation, Models & Migrations Verified)  
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
@@ -26,30 +26,32 @@ Deterministic rules turn structured data into actionable intelligence.
 
 ## 2. Architecture Baseline
 
-### Current Implemented Architecture (Frontend Baseline)
+### Implemented Architecture (Frontend Baseline + Phase 1 Backend Foundation)
 
 | Layer | Technology | Details |
 | :--- | :--- | :--- |
 | **Frontend Framework** | React 19 (`react` 19.0.0, `react-dom` 19.0.0) | StrictMode enabled, functional components with hooks |
-| **Language** | TypeScript 5.7 (`strict: true`) | Target ES2020, bundler module resolution, path alias `@/*` |
+| **Language (Frontend)** | TypeScript 5.7 (`strict: true`) | Target ES2020, bundler module resolution, path alias `@/*` |
 | **Build Tooling** | Vite 8 (`@vitejs/plugin-react`) | Development server and production bundler (`port: 8443`, `host: 0.0.0.0`) |
 | **Routing** | React Router v7 (`react-router-dom` 7.18.3) | Client-side `BrowserRouter` with nested `<Shell />` layout and route-driven navigation |
 | **Styling & Design System** | Tailwind CSS v4 (`@tailwindcss/vite`) | Utility-first with CSS variables in `src/index.css` (`--primary`, `--accent`, `--risk-*`), Inter and JetBrains Mono typography |
 | **Mock Data Layer** | In-memory TypeScript definitions (`src/data/mock.ts`) | Strongly typed models for `Contract`, `Risk`, `Obligation`, `AuditEvent`, and status enums |
+| **Backend API** | Python 3.13 + FastAPI (`fastapi==0.115.5`, `uvicorn==0.32.1`) | CORS middleware, lifespan startup/shutdown, `/health` and `/` endpoints |
+| **Database ORM & Driver** | SQLAlchemy 2.0 (`sqlalchemy==2.0.36`) + `psycopg2-binary==2.9.10` | 7 domain models, DeclarativeBase, pool pre-ping, connection health check |
+| **Primary Database** | Neon PostgreSQL (cloud-managed serverless) | Branch `production`, Database `neondb` (PostgreSQL 18.6 verified) |
+| **Vector Extension** | `pgvector` (`pgvector==0.3.6` on PostgreSQL) | Version 0.8.6 verified on Neon; `Vector` column mapped on `DocumentChunk` |
+| **Migration Tooling** | Alembic (`alembic==1.14.0`) | Migration `df2c477aaabb_initial_schema` applied to Neon PostgreSQL |
 
-### Planned Target Architecture *(PLANNED — Not Yet Implemented)*
+### Planned Target Architecture *(PLANNED — Future Phases)*
 
 | Component | Planned Technology / Strategy | Status |
 | :--- | :--- | :--- |
-| **Backend API** | Python (FastAPI) or Node.js REST API | *PLANNED* |
-| **Primary Database** | PostgreSQL | *PLANNED* |
-| **Vector Database** | `pgvector` extension for PostgreSQL | *PLANNED* |
-| **Document Processing** | PDF text extraction preserving page boundaries & tables | *PLANNED* |
-| **Chunking Engine** | Clause-aware semantic chunking with page metadata | *PLANNED* |
-| **Retrieval Pipeline** | Hybrid Search (pgvector semantic similarity + PostgreSQL tsvector keyword search) + Reranking | *PLANNED* |
-| **LLM Orchestration** | Gemini / OpenAI with strict Structured Outputs (JSON Schema / Pydantic) | *PLANNED* |
-| **Risk Rules Engine** | Deterministic business rules evaluating extracted structured facts | *PLANNED* |
-| **Authentication & RBAC** | Per-user document isolation and role-based permissions | *PLANNED* |
+| **Document Processing** | PDF text extraction preserving page boundaries & tables | *Phase 2 PLANNED* |
+| **Chunking Engine** | Clause-aware semantic chunking with page metadata | *Phase 2 PLANNED* |
+| **Retrieval Pipeline** | Hybrid Search (pgvector semantic similarity + PostgreSQL tsvector keyword search) + Reranking | *Phase 3 PLANNED* |
+| **LLM Orchestration** | Gemini / OpenAI with strict Structured Outputs (JSON Schema / Pydantic) | *Phase 4 PLANNED* |
+| **Risk Rules Engine** | Deterministic business rules evaluating extracted structured facts | *Phase 4 PLANNED* |
+| **Authentication & RBAC** | Per-user document isolation and role-based permissions | *Phase 6 PLANNED* |
 
 ---
 
@@ -62,6 +64,14 @@ Contract Intelligence Dashboard/
 ├── FLOW.md                    # Current application flow & planned system architecture
 ├── PHASE_STATUS.md            # Progress tracker, known issues, and next phase actions
 ├── README.md                  # This architecture baseline and setup guide
+├── backend/                   # Backend application (FastAPI + SQLAlchemy + Alembic)
+│   ├── alembic/               # Migration scripts and environment configuration
+│   ├── app/                   # Application package (main, core, db, models, schemas)
+│   ├── tests/                 # Backend test suite (pytest)
+│   ├── requirements.txt       # Python dependencies
+│   ├── pytest.ini             # Pytest configuration
+│   ├── alembic.ini            # Alembic configuration
+│   └── .env.example           # Environment template (copy to .env)
 ├── index.html                 # HTML entry point
 ├── package.json               # Project manifest and scripts
 ├── tsconfig.json              # TypeScript configuration
@@ -98,28 +108,49 @@ Contract Intelligence Dashboard/
 - Node.js (v18.x, v20.x, or later recommended)
 - npm (v9.x or later)
 
-### Installation
+### Frontend Setup
 ```bash
+# Install dependencies
 npm install
-```
 
-### Running the Development Server
-```bash
+# Run frontend development server (http://localhost:8443)
 npm run dev
-```
-The application will start on `http://localhost:8443`.
 
-### Production Build & Type Checking
-```bash
-# Verify TypeScript types
-npx tsc
-
-# Create production build
+# Production build and TypeScript verification
 npm run build
-
-# Preview production build locally
-npm run preview
+npx tsc --noEmit
 ```
+
+### Backend Setup (Python 3.13 + FastAPI + SQLAlchemy + Alembic)
+```bash
+cd backend
+
+# Create and activate virtual environment
+python -m venv .venv
+# On Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# On Linux/macOS:
+# source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment (copy template — never commit real secrets)
+cp .env.example .env
+# Edit .env and supply your Neon DATABASE_URL:
+# DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>/<dbname>?sslmode=require
+
+# Run database migrations
+alembic upgrade head
+
+# Run backend test suite
+pytest tests/ -v
+
+# Run FastAPI backend development server (http://localhost:8000)
+uvicorn app.main:app --reload --port 8000
+```
+API Documentation will be available at `http://localhost:8000/docs`.  
+System and database health check is available at `http://localhost:8000/health`.
 
 ---
 

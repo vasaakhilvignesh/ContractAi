@@ -8,19 +8,19 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 0: Inspection, Architecture Baseline & Project Memory** |
-| **Status** | **IN PROGRESS** |
-| **Last Verified State** | Frontend builds cleanly (`npm run build`), TypeScript passes with 0 errors (`npx tsc`) |
-| **Last Git Commit** | `edef663` ("Changes are made") |
+| **Current Phase** | **Phase 1: Backend Foundation, Data Modeling & Database Setup** |
+| **Status** | **COMPLETE** |
+| **Last Verified State** | Backend: 48 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `c8a17ab` ("docs: establish project architecture and phase tracking") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 1: Backend Foundation, Data Modeling & Database Setup** |
-| **Exact Next Action** | Await user instruction to conclude Phase 0 and review recommendations before initiating Phase 1. |
+| **Next Phase** | **Phase 2: PDF Ingestion, Text Extraction & Chunking Engine** |
+| **Exact Next Action** | Await user instruction to commence Phase 2 (PDF ingestion handler, text extraction, clause-aware chunking). |
 
 ---
 
 ## 2. Phase Breakdown & Status
 
-- [x] **Phase 0: Project Baseline, Audit & Memory Protocol** *(Current)*
+- [x] **Phase 0: Project Baseline, Audit & Memory Protocol** *(Completed)*
   - [x] Full codebase audit of dependencies, tooling, routes, components, and styling.
   - [x] Verification of production build and type checking.
   - [x] Git repository and remote safety audit.
@@ -29,12 +29,23 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] Creation of `FLOW.md` (Current application flow & planned system architecture).
   - [x] Creation of `PHASE_STATUS.md` (This roadmap).
   - [x] Architecture baseline documentation updated in `README.md`.
-- [ ] **Phase 1: Backend Scaffolding, Data Modeling & Database (PostgreSQL + pgvector)**
-  - [ ] Backend technology selection (Python FastAPI vs Node.js).
-  - [ ] Database schema design (Contracts, Document Chunks, Clauses, Obligations, Risks, Users, Audit Logs).
-  - [ ] pgvector extension enablement and vector column indexing.
-  - [ ] Database migration tooling and initial seed script.
-  - [ ] Core REST API endpoints for Contract listing, retrieval, and metadata.
+- [x] **Phase 1: Backend Scaffolding, Data Modeling & Database (PostgreSQL + pgvector)** *(Completed)*
+  - [x] Backend technology selection: Python FastAPI + SQLAlchemy 2.0 (DEC-006, DEC-017).
+  - [x] Python virtual environment setup (`backend/.venv`) and dependency installation (`requirements.txt`).
+  - [x] FastAPI application scaffold with CORS, lifespan, and configuration (`backend/app/`).
+  - [x] Database schema design: 7 models with strict evidence lineage (`User`, `Contract`, `DocumentChunk`, `Clause`, `Obligation`, `RiskSignal`, `AuditEvent`).
+  - [x] pgvector integration: `Vector` column mapping on `DocumentChunk`.
+  - [x] Alembic migration tooling configured (`backend/alembic/`) with dynamic environment variable loading.
+  - [x] Health check endpoint (`GET /health`) verifying API process and database connectivity.
+  - [x] Backend unit test suite (48 passed, 0 skipped).
+  - [x] `DATABASE_URL` configured for Neon PostgreSQL in gitignored `backend/.env`.
+  - [x] Live Neon PostgreSQL connection verified (PostgreSQL 18.6).
+  - [x] Live pgvector extension verified (version 0.8.6).
+  - [x] Initial Alembic migration generated (`20260912_1452_df2c477aaabb_initial_schema.py`).
+  - [x] Initial migration applied to Neon PostgreSQL (`alembic upgrade head`).
+  - [x] All 7 application tables and `alembic_version` verified in Neon public schema.
+  - [x] All 12 foreign keys and pgvector column verified in Neon database.
+  - [x] Live database health check test (`test_health_with_real_db_is_ok`) passed against Neon.
 - [ ] **Phase 2: PDF Ingestion, Text Extraction & Chunking Engine**
   - [ ] PDF upload handler with file validation and storage.
   - [ ] Text extraction preserving page numbers, section headers, and tabular data.
@@ -88,6 +99,12 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Date | Verification Step | Command | Result |
 | :--- | :--- | :--- | :--- |
-| 2026-09-12 | Clean build | `npm run build` | **PASSED** (built in 393ms, 0 errors) |
-| 2026-09-12 | TypeScript Typecheck | `npx tsc` | **PASSED** (0 errors) |
-| 2026-09-12 | Git Status Audit | `git status` | Clean working tree on `main` |
+| 2026-09-12 | Frontend Build | `npm run build` | **PASSED** (built in 209ms, 0 errors) |
+| 2026-09-12 | TypeScript Typecheck | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Live Neon DB Connection | `check_database_connection()` | **PASSED** (PostgreSQL 18.6, pgvector 0.8.6 verified) |
+| 2026-09-12 | Alembic Schema Migration | `alembic upgrade head` | **PASSED** (applied revision `df2c477aaabb_initial_schema`) |
+| 2026-09-12 | Live Neon Schema Audit | `information_schema.tables` | **PASSED** (all 7 application tables, 12 foreign keys, and vector column verified) |
+| 2026-09-12 | Complete Backend Test Suite | `pytest tests/ -v` | **PASSED** (48 passed, 0 skipped, live DB health test verified) |
+| 2026-09-12 | Git Safety & Secrets Audit | `git check-ignore backend/.env` | **PASSED** (`backend/.env` is untracked & ignored, secrets safe) |
+
+

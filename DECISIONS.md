@@ -68,19 +68,60 @@ Format for each record:
 
 ---
 
-## 2. Pending & Undecided Decisions (To Be Documented in Future Phases)
-
-The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
+## 2. Implemented & Confirmed Decisions (Phase 1)
 
 ### DEC-006: Backend Language & Framework
-- **Status:** **Not decided yet.**
-- **Candidates:** Python (FastAPI) vs Node.js/TypeScript (Express / Fastify / NestJS).
-- **Considerations:** Python has dominant ecosystem support for document processing, OCR, LangChain/LlamaIndex, and embedding pipelines; Node.js would unify frontend/backend language. Will be evaluated during Phase 1.
+- **Decision:** Python with FastAPI (`fastapi==0.115.5`, `uvicorn[standard]==0.32.1`).
+- **Context:** Phase 1 requires a backend REST API server that can eventually serve as the foundation for a document processing, RAG retrieval, and structured extraction pipeline.
+- **Why this decision was made:** Python has the dominant ecosystem for all downstream Phase 2–4 requirements: `pdfplumber`/`PyMuPDF` for extraction, `sentence-transformers` / Gemini/OpenAI SDK for embeddings, `LangChain`/`LlamaIndex` for orchestration. FastAPI provides automatic OpenAPI documentation, Pydantic validation, async support, and is the standard choice for Python AI/ML backends. It avoids introducing a second language when Node.js would not benefit the backend at all.
+- **Alternatives considered:** Node.js + Express / Fastify / NestJS.
+- **Why alternatives were rejected:** Node.js would add zero value for the backend. All heavy-lifting in Phase 2–4 (PDF extraction, embeddings, RAG) requires Python libraries. Unifying backend in Python is simpler and more maintainable (Rule 2, Rule 10, Rule 11).
+- **Consequences / Trade-offs:** Backend is a separate process from the Vite SPA. In development, CORS is configured to allow all origins (restricted in Phase 5 production hardening).
+- **Phase:** Phase 1
+- **Date:** 2026-09-12
 
 ### DEC-007: Primary Database & Vector Store
-- **Status:** **Not decided yet.**
-- **Project Direction:** PostgreSQL with `pgvector` extension.
-- **Considerations:** PostgreSQL provides ACID guarantees for contract metadata, clauses, obligations, and risk rules, while `pgvector` enables unified relational + vector queries without introducing a separate vector DB (such as Pinecone or Milvus). Exact ORM/driver (e.g. SQLAlchemy, Prisma, Drizzle) is not decided yet.
+- **Decision:** Neon PostgreSQL (cloud-managed, serverless) with `pgvector` extension (version 0.8.6 already installed on Neon `production` branch).
+- **Context:** ContractIQ requires ACID-compliant relational storage for contract metadata, clauses, obligations, and risk signals, plus vector similarity search for RAG retrieval (Phase 3).
+- **Why this decision was made:** PostgreSQL provides transactional guarantees across all relational tables. `pgvector` enables unified relational + vector storage without a separate vector database (Pinecone/Milvus), reducing operational complexity. Neon provides serverless autoscaling, branching for development isolation, and a managed production deployment. pgvector 0.8.6 supports HNSW and IVFFlat indexing required for Phase 3.
+- **Alternatives considered:** Supabase (PostgreSQL + pgvector), PlanetScale (MySQL — no pgvector), local Docker PostgreSQL, Pinecone (vector-only, no relational), Weaviate.
+- **Why alternatives were rejected:** Supabase was viable but Neon was already provisioned and verified. MySQL/PlanetScale has no native pgvector support. Pinecone would require a separate relational database for contract metadata. Local Docker adds operational dependency that violates Rule 10 (prefer simple architecture).
+- **Consequences / Trade-offs:** Application is cloud-dependent (Neon). Local development requires `DATABASE_URL` from Neon in a gitignored `.env` file. Connection pooling uses `pool_size=5, max_overflow=10` with `pool_pre_ping=True` for Neon's serverless connection behavior.
+- **Phase:** Phase 1
+- **Date:** 2026-09-12
+
+### DEC-017: ORM & Migration Tooling
+- **Decision:** SQLAlchemy 2.0 (mapped columns + DeclarativeBase) with Alembic for schema migrations.
+- **Context:** Phase 1 needs an ORM layer for all 7 database entities and a migration system to track schema changes across development, staging, and production.
+- **Why this decision was made:** SQLAlchemy 2.0's new mapped-column style provides full type inference in Python and strict typing compatible with `strict: true` style Python typing. Alembic is SQLAlchemy's native migration tool with autogenerate capability. Together they form the de-facto standard for Python/PostgreSQL backends.
+- **Alternatives considered:** Tortoise ORM (async-first), SQLModel (Pydantic + SQLAlchemy hybrid), Prisma (TypeScript-native), raw psycopg2.
+- **Why alternatives were rejected:** Tortoise ORM / SQLModel are less mature than SQLAlchemy 2.0. Prisma is TypeScript-first and conflicts with the Python backend decision (DEC-006). Raw psycopg2 would require hand-writing all migration SQL, which is error-prone.
+- **Consequences / Trade-offs:** Alembic is the sole schema migration authority. Tables must never be created by means other than Alembic migrations (e.g., no `Base.metadata.create_all()` in production).
+- **Phase:** Phase 1
+- **Date:** 2026-09-12
+
+### DEC-018: PostgreSQL Python Driver
+- **Decision:** `psycopg2-binary==2.9.10` (binary wheel, no build dependencies).
+- **Context:** SQLAlchemy requires a PostgreSQL driver. The binary wheel avoids needing `libpq-dev` or a C compiler in CI environments.
+- **Alternatives considered:** `psycopg` (psycopg3 — async-native), `asyncpg` (async-only), `pg8000` (pure Python).
+- **Why alternatives were rejected:** `psycopg2-binary` is the most battle-tested, widely documented driver with broad SQLAlchemy support. `psycopg3` (psycopg) is newer and the async model introduces unnecessary complexity in Phase 1. `asyncpg` requires a different connection string format and does not work with the sync SQLAlchemy engine used in Phase 1.
+- **Consequences / Trade-offs:** `psycopg2-binary` is not recommended for production distribution packages (the maintainer recommends `psycopg2` with build deps for production). For Phase 5/6 production hardening, this can be revisited.
+- **Phase:** Phase 1
+- **Date:** 2026-09-12
+
+### DEC-019: Environment Configuration Strategy
+- **Decision:** `pydantic-settings==2.6.1` with a gitignored `backend/.env` file (populated from `backend/.env.example`).
+- **Context:** The application must read `DATABASE_URL` and other secrets from the environment without hardcoding them. The `.env` file must never be committed.
+- **Why this decision was made:** `pydantic-settings` integrates natively with FastAPI/Pydantic and provides type-validated, self-documenting settings. The `.gitignore` already excludes `.env*` patterns; `!.env.example` negation allows the template to be committed safely.
+- **Alternatives considered:** `python-decouple`, `dynaconf`, raw `os.environ`.
+- **Why alternatives were rejected:** `pydantic-settings` is already a dependency (via Pydantic) and provides the cleanest integration with FastAPI. Raw `os.environ` provides no type validation or default management.
+- **Consequences / Trade-offs:** Developers must copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL` before the server can connect to Neon.
+- **Phase:** Phase 1
+- **Date:** 2026-09-12
+
+## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
+
+The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
 
 ### DEC-008: PDF Text Extraction & OCR Strategy
 - **Status:** **Not decided yet.**

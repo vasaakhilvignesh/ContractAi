@@ -101,6 +101,59 @@ All dynamic data currently flows synchronously from in-memory records in `src/da
 
 ---
 
+### 4. Current Backend Architecture (Phase 1 — IMPLEMENTED)
+
+The backend foundation is scaffolded as a standalone Python FastAPI service in `backend/`:
+
+```
+Client (Browser / Curl / Tests)
+   │
+   ▼ HTTP Requests
+FastAPI Application (`backend/app/main.py`)
+   ├── CORS Middleware (Development: allow-all; Phase 5: restricted)
+   ├── Configuration (`backend/app/core/config.py` via pydantic-settings)
+   ├── Routers:
+   │    ├── GET /health -> DatabaseHealthSchema & HealthResponseSchema
+   │    └── GET /       -> Root discovery
+   │
+   ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
+Relational Models (`backend/app/models/`):
+   ├── User             (Auth root, tenant anchor)
+   ├── Contract         (Document metadata, lifecycle, risk summary cache)
+   ├── DocumentChunk    (Page number, text, chunk index, Vector embedding)
+   ├── Clause           (Extracted clause, verbatim text, page number, facts)
+   ├── Obligation       (Responsible party, deadline, priority, lineage)
+   ├── RiskSignal       (Rule ID, severity, verbatim quote, lineage)
+   └── AuditEvent       (Tamper-evident append-only activity log)
+   │
+   ▼ Migrations (`backend/alembic/`)
+Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema` applied to Neon PostgreSQL
+   │
+   ▼ Primary Database (`Neon PostgreSQL` + `pgvector`)
+All 7 relational tables + vector column + 12 foreign keys created and active
+```
+
+**Evidence Lineage Flow (Implemented in Schema & Live in Neon):**
+```
+Contract (id)
+   │
+   ├──► DocumentChunk (id, contract_id, page_number, chunk_index, embedding)
+   │       │
+   │       └──► Clause (id, contract_id, source_chunk_id, verbatim_text, page_number)
+   │               │
+   │               ├──► Obligation (id, contract_id, source_clause_id, source_chunk_id)
+   │               └──► RiskSignal (id, contract_id, source_clause_id, source_chunk_id, rule_id)
+   │
+   └──► AuditEvent (id, contract_id, user_id, event_type, created_at)
+```
+
+*Current Database Connection State:*
+- Live connection to Neon PostgreSQL (v18.6) with `pgvector` (v0.8.6) is verified and operational.
+- Real-time database health check in `GET /health` executes live round-trip queries and returns `status: "ok"` and `connected: true`.
+- Graceful degraded-mode fallback remains implemented for network or configuration interruptions.
+
+---
+
 ## PART 2: PLANNED SYSTEM FLOW (Target Architecture)
 
 The following pipelines describe the intended production architecture. These components are **NOT YET IMPLEMENTED** and represent target workflows for subsequent phases.
