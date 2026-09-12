@@ -24,8 +24,11 @@ from app.schemas.contract import (
     ContractUploadResponse,
     ContractProcessingStatusResponse,
     ContractProcessingStatusUpdate,
+    ProcessingStatus,
 )
-from app.services import contract_service, storage_service
+from app.schemas.extraction import ContractExtractionResponse
+from app.services import contract_service, storage_service, pdf_extraction_service
+
 
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -285,5 +288,169 @@ def update_contract_processing_status(
         file_name=updated_contract.file_name,
         updated_at=updated_contract.updated_at,
     )
+
+
+@router.post(
+    "/{contract_id}/extract",
+    response_model=ContractExtractionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract text and structure from uploaded contract PDF",
+    description=(
+        "Safely loads the uploaded PDF document, parses text and layout blocks "
+        "preserving 1-indexed page boundaries, detects scanned documents, and updates "
+        "contract page_count and processing status."
+    ),
+)
+def extract_contract_text(
+    contract_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ContractExtractionResponse:
+    """Extract text from uploaded contract PDF."""
+    # 1. Verify contract exists
+    db_contract = contract_service.get_contract(db=db, contract_id=contract_id)
+    if not db_contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+
+    # 2. Verify file has been uploaded
+    if not db_contract.file_storage_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot extract text: no document file has been uploaded for this contract.",
+        )
+
+    # 3. Transition contract lifecycle into processing state
+    current_status = db_contract.processing_status
+    if current_status == ProcessingStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Contract document has already completed processing. Re-upload a document to re-process.",
+        )
+
+    # Transition to QUEUED then PROCESSING if currently UPLOADED or FAILED
+    try:
+        if current_status in (ProcessingStatus.UPLOADED.value, ProcessingStatus.FAILED.value):
+            db_contract = contract_service.update_contract_processing_status(
+                db=db, db_contract=db_contract, new_status=ProcessingStatus.QUEUED
+            )
+            db_contract = contract_service.update_contract_processing_status(
+                db=db, db_contract=db_contract, new_status=ProcessingStatus.PROCESSING
+            )
+        elif current_status == ProcessingStatus.QUEUED.value:
+            db_contract = contract_service.update_contract_processing_status(
+                db=db, db_contract=db_contract, new_status=ProcessingStatus.PROCESSING
+            )
+        # If already in PROCESSING state, proceed directly
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to advance processing state: {exc}",
+        )
+
+    # 4. Perform extraction with PyMuPDF
+    try:
+        extraction_result = pdf_extraction_service.extract_contract_document(
+            storage_key=db_contract.file_storage_key,
+            contract_id=db_contract.id,
+        )
+    except pdf_extraction_service.PDFNotFoundError:
+        contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message="Physical PDF file missing from storage.",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Physical contract PDF file not found on disk.",
+        )
+    except pdf_extraction_service.PDFPathTraversalError:
+        contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message="Security violation: invalid storage path.",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path security violation: storage key attempts directory traversal.",
+        )
+    except pdf_extraction_service.PDFEncryptedError as exc:
+        contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password-protected and encrypted PDFs are not supported.",
+        )
+    except (
+        pdf_extraction_service.PDFCorruptedError,
+        pdf_extraction_service.PDFPageLimitExceededError,
+    ) as exc:
+        contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception:
+        contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message="An unexpected error occurred during PDF text extraction.",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during PDF text extraction.",
+        )
+
+    # 5. Update Contract.page_count
+    db_contract.page_count = extraction_result.total_pages
+    db.commit()
+    db.refresh(db_contract)
+
+    # 6. Lifecycle transition based on extraction outcome
+    if (
+        extraction_result.is_scanned
+        or extraction_result.extraction_status == "scanned_requires_ocr"
+    ):
+        db_contract = contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.FAILED,
+            error_message="Scanned document detected: native text extraction yielded no characters (requires OCR).",
+        )
+        message = (
+            "Document appears to be scanned or image-only. No text layer found (requires OCR)."
+        )
+    else:
+        db_contract = contract_service.update_contract_processing_status(
+            db=db,
+            db_contract=db_contract,
+            new_status=ProcessingStatus.COMPLETED,
+        )
+        message = f"Successfully extracted text from {extraction_result.extracted_pages} pages."
+
+    return ContractExtractionResponse(
+        contract_id=db_contract.id,
+        total_pages=extraction_result.total_pages,
+        extracted_pages=extraction_result.extracted_pages,
+        is_scanned=extraction_result.is_scanned,
+        extraction_status=extraction_result.extraction_status,
+        processing_status=db_contract.processing_status,
+        page_count=db_contract.page_count,
+        message=message,
+    )
+
 
 

@@ -29,3 +29,7 @@ pydantic-settings==2.6.1
 pytest==8.3.4
 pytest-asyncio==0.24.0
 httpx==0.28.0   # ASGI test client for FastAPI
+
+# --- Document Processing: PDF Extraction (Phase 3A) ---
+pymupdf==1.28.2
+

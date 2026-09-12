@@ -15,6 +15,13 @@ from app.schemas.contract import (
     ContractProcessingStatusResponse,
 )
 
+from app.schemas.extraction import (
+    PageBlock,
+    PageExtraction,
+    ExtractionResult,
+    ContractExtractionResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -27,6 +34,10 @@ __all__ = [
     "ProcessingStatus",
     "ContractProcessingStatusUpdate",
     "ContractProcessingStatusResponse",
+    "PageBlock",
+    "PageExtraction",
+    "ExtractionResult",
+    "ContractExtractionResponse",
 ]
 
 

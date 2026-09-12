@@ -40,11 +40,13 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
 
     # ----------------------------------------------------------------
-    # Storage & Uploads (Phase 2B)
+    # Storage & Uploads (Phase 2B) & Document Processing (Phase 3A)
     # ----------------------------------------------------------------
     storage_dir: Path = Path(__file__).resolve().parents[2] / "storage"
     max_upload_size_bytes: int = 20 * 1024 * 1024  # 20 MB default
     allowed_upload_extensions: list[str] = [".pdf"]
+    max_pdf_pages: int = 250  # Defensive maximum page count for extraction
+
 
 
     @field_validator("database_url")

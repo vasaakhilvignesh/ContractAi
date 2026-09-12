@@ -151,14 +151,21 @@ Format for each record:
 
 
 
+### DEC-008: PDF Text Extraction Engine & Scanned Document Handling
+- **Decision:** PyMuPDF (`pymupdf==1.28.2`) for high-performance native text extraction with structural block layout and bounding box preservation, accompanied by explicit scanned/image-only document detection without OCR.
+- **Context:** Phase 3A requires extracting raw text from uploaded contract PDFs, preserving 1-indexed page boundaries, character/word metrics, and structural heading candidates to enable accurate citation lineage in downstream chunking (Phase 3B) and retrieval (Phase 3C).
+- **Why this decision was made:** PyMuPDF is 15–30x faster than pdfminer/pdfplumber, provides robust C-based MuPDF parsing that handles malformed enterprise contracts, accurately extracts text blocks (`page.get_text("blocks")`), and cleanly identifies raster images for scanned document detection. Scanned documents are explicitly flagged (`is_scanned: True`, `extraction_status: "scanned_requires_ocr"`) rather than pretending text extraction succeeded. Heavy external OCR dependencies (Tesseract) were excluded to adhere to Rule 2 and Rule 10.
+- **Alternatives considered:** `pypdf`, `pdfplumber`, `pytesseract` / `EasyOCR`.
+- **Why alternatives were rejected:** `pypdf` loses layout blocks, merges multi-column contract text, and has weak table handling. `pdfplumber` is CPU-intensive and slow on large multi-page legal documents. Tesseract/EasyOCR requires external binary system packages (`tesseract.exe`), adds multi-gigabyte models, and introduces brittle cross-platform dependencies unsuitable for standard digital-native enterprise contracts.
+- **Consequences / Trade-offs:** Pure image-only contracts cannot extract text until an OCR fallback worker is added in a future phase. Native digital PDFs extract with sub-100ms latency and high layout fidelity.
+- **Phase:** Phase 3A
+- **Date:** 2026-09-12
+
+---
+
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
 The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
-
-### DEC-008: PDF Text Extraction & OCR Strategy
-- **Status:** **Not decided yet.**
-- **Candidates:** `pypdf`, `pdfplumber`, `PyMuPDF` (fitz), or OCR tools (Tesseract) for scanned docs.
-- **Considerations:** Must preserve page numbers, layout coordinates, and table structures to enable page-level citations.
 
 ### DEC-009: Document Chunking Strategy
 - **Status:** **Not decided yet.**

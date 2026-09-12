@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 2C: Contract Processing State** |
+| **Current Phase** | **Phase 3A: PDF Text Extraction** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 81 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `e7e7526` ("feat: add contract upload api") |
+| **Last Verified State** | Backend: 100 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `d6e2b82` ("feat: add contract processing state") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 3A: PDF Text Extraction & OCR Engine** |
-| **Exact Next Action** | Commence Phase 3A (PDF text extraction, preserving page numbers, section headers, and tabular data). |
+| **Next Phase** | **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline** |
+| **Exact Next Action** | Commence Phase 3B (Text normalization, clause boundary segmentation, chunking engine with page-level lineage metadata). |
 
 ---
 
@@ -74,10 +74,20 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] 10 focused tests in `backend/tests/test_contract_processing_state.py` (81 total backend tests passing).
     - [x] Zero database migrations required; reuses existing `processing_status` and `processing_error` columns.
 - [ ] **Phase 3: PDF Extraction, Text Normalization & Chunking Engine**
-  - [ ] **Phase 3A: PDF Text Extraction & OCR Engine**
-    - [ ] Text extraction preserving page numbers, section headers, and tabular data.
-  - [ ] **Phase 3B: Clause-Aware Chunking Pipeline**
-    - [ ] Clause-aware chunking pipeline with page-level lineage metadata.
+  - [x] **Phase 3A: PDF Text Extraction** *(Completed)*
+    - [x] Integrated PyMuPDF (`pymupdf==1.28.2`) for fast, robust native PDF extraction.
+    - [x] Defined strongly typed extraction schemas (`PageBlock`, `PageExtraction`, `ExtractionResult`, `ContractExtractionResponse`).
+    - [x] Built independent PDF extraction service (`pdf_extraction_service.py`) with safe path traversal resolution.
+    - [x] Preserved 1-indexed sequential page lineage and blank pages.
+    - [x] Implemented block-level layout extraction and conservative heading candidate heuristics.
+    - [x] Added scanned / image-only PDF detection (`is_scanned: True`, `extraction_status: "scanned_requires_ocr"`).
+    - [x] Encrypted / password-protected PDF rejection without cracking.
+    - [x] Synchronous extraction endpoint: `POST /contracts/{contract_id}/extract` (and `/api/v1` alias).
+    - [x] Updates `Contract.page_count` in Neon PostgreSQL; zero schema migrations required.
+    - [x] 19 comprehensive unit and integration tests in `backend/tests/test_pdf_extraction.py` (100 total backend tests passing).
+  - [ ] **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline**
+    - [ ] Text normalization and cleaning without semantic alteration.
+    - [ ] Clause-aware chunking pipeline with page-level lineage metadata and boundary segmentation.
   - [ ] **Phase 3C: Dense Embedding Generation & pgvector Insertion**
     - [ ] Integration of embedding model to generate dense vectors.
     - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
@@ -147,6 +157,11 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 2C) | `pytest tests/ -v` | **PASSED** (81 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 2C Check) | `npm run build` | **PASSED** (built in 199ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 2C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 3A PDF Extraction Tests | `pytest tests/test_pdf_extraction.py -v` | **PASSED** (19 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 3A) | `pytest tests/ -v` | **PASSED** (100 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 3A Check) | `npm run build` | **PASSED** (built in 212ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 3A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+
 
 
 

@@ -20,6 +20,18 @@ from app.services.storage_service import (
     sanitize_filename,
 )
 
+from app.services.pdf_extraction_service import (
+    PDFExtractionError,
+    PDFNotFoundError,
+    PDFPathTraversalError,
+    PDFEncryptedError,
+    PDFCorruptedError,
+    PDFPageLimitExceededError,
+    resolve_pdf_path,
+    extract_text_from_pdf,
+    extract_contract_document,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -33,6 +45,15 @@ __all__ = [
     "save_contract_file",
     "remove_stored_file",
     "sanitize_filename",
+    "PDFExtractionError",
+    "PDFNotFoundError",
+    "PDFPathTraversalError",
+    "PDFEncryptedError",
+    "PDFCorruptedError",
+    "PDFPageLimitExceededError",
+    "resolve_pdf_path",
+    "extract_text_from_pdf",
+    "extract_contract_document",
 ]
 
 
