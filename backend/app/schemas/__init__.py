@@ -9,6 +9,7 @@ from app.schemas.contract import (
     ContractUpdate,
     ContractResponse,
     ContractListResponse,
+    ContractUploadResponse,
 )
 
 __all__ = [
@@ -19,4 +20,6 @@ __all__ = [
     "ContractUpdate",
     "ContractResponse",
     "ContractListResponse",
+    "ContractUploadResponse",
 ]
+

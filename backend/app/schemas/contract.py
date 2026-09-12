@@ -143,3 +143,18 @@ class ContractListResponse(BaseModel):
     total: int = Field(..., ge=0, description="Total number of contracts matching filters")
     limit: int = Field(..., ge=1, description="Page limit")
     offset: int = Field(..., ge=0, description="Page offset")
+
+
+class ContractUploadResponse(BaseModel):
+    """Response returned after a contract PDF is successfully uploaded."""
+
+    contract_id: uuid.UUID = Field(..., description="UUID of the contract")
+    file_name: str = Field(..., description="Original uploaded file name")
+    file_size: int = Field(..., ge=0, description="Size of the uploaded file in bytes")
+    content_type: str = Field(..., description="MIME content type of the uploaded file")
+    storage_key: str = Field(..., description="Relative storage key for the stored document")
+    processing_status: str = Field(..., description="Current document processing status")
+    uploaded_at: datetime = Field(..., description="Timestamp when the file was uploaded and recorded")
+
+    model_config = ConfigDict(from_attributes=True)
+

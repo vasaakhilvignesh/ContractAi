@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     app_name: str = "ContractIQ API"
     app_version: str = "1.0.0"
 
+    # ----------------------------------------------------------------
+    # Storage & Uploads (Phase 2B)
+    # ----------------------------------------------------------------
+    storage_dir: Path = Path(__file__).resolve().parents[2] / "storage"
+    max_upload_size_bytes: int = 20 * 1024 * 1024  # 20 MB default
+    allowed_upload_extensions: list[str] = [".pdf"]
+
+
     @field_validator("database_url")
     @classmethod
     def database_url_must_not_be_empty_in_production(

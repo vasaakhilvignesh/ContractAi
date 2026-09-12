@@ -91,3 +91,25 @@ def delete_contract(db: Session, db_contract: Contract) -> None:
     """Delete a contract record and cascade delete associated children."""
     db.delete(db_contract)
     db.commit()
+
+
+def associate_contract_file(
+    db: Session,
+    db_contract: Contract,
+    *,
+    file_name: str,
+    storage_key: str,
+    processing_status: str = "uploaded",
+) -> Contract:
+    """
+    Associate an uploaded document with an existing contract record.
+    Updates file_name, file_storage_key, and sets processing_status.
+    """
+    db_contract.file_name = file_name
+    db_contract.file_storage_key = storage_key
+    db_contract.processing_status = processing_status
+    db_contract.processing_error = None
+    db.commit()
+    db.refresh(db_contract)
+    return db_contract
+

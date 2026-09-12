@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 2A: Contract API Foundation** |
+| **Current Phase** | **Phase 2B: Contract Upload API** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 60 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `fa22bf2` ("feat: complete phase 1 backend database foundation") |
+| **Last Verified State** | Backend: 71 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `1885724` ("feat: add contract api foundation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 2B: Contract Upload API** |
-| **Exact Next Action** | Commence Phase 2B (PDF file upload endpoint, file validation, and document storage handler). |
+| **Next Phase** | **Phase 2C: Contract Processing State** |
+| **Exact Next Action** | Commence Phase 2C (Contract processing lifecycle, status transitions, and pipeline tracking). |
 
 ---
 
@@ -54,9 +54,20 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] 12 comprehensive contract API unit/integration tests covering CRUD, pagination, 404/422 errors against live Neon DB.
     - [x] Backend test suite passes: 60 passed (48 Phase 1 + 12 Phase 2A).
     - [x] Zero database migration required; fully compatible with Phase 1 schema.
-  - [ ] **Phase 2B: Contract Upload API & Storage**
-    - [ ] PDF upload handler with file validation (MIME, size) and storage backend.
-  - [ ] **Phase 2C: Text Extraction & Clause Chunking**
+  - [x] **Phase 2B: Contract Upload API & Storage** *(Completed)*
+    - [x] Dedicated upload endpoint: `POST /contracts/{contract_id}/upload` (with `/api/v1` alias).
+    - [x] File validation: filename sanitization, `.pdf` extension enforcement, MIME type check.
+    - [x] PDF signature verification: strict `%PDF-` magic bytes check.
+    - [x] Size limitation: configurable limit (20 MB default) returning 413 on oversize.
+    - [x] Path traversal prevention: UUID-based safe storage path generation.
+    - [x] Contract association: updates `file_name`, `file_storage_key`, `processing_status="uploaded"`.
+    - [x] Atomic failure cleanup: unlinks newly stored file if database commit fails.
+    - [x] Deterministic re-upload: replaces contract file association and deletes previous physical file.
+    - [x] 11 integration tests in `backend/tests/test_contract_upload_api.py` (71 total backend tests passing).
+    - [x] Zero database migrations required; reuses Phase 1 schema fields.
+  - [ ] **Phase 2C: Contract Processing State**
+    - [ ] Contract processing state transitions, status tracking, and error capture.
+  - [ ] **Phase 3: PDF Extraction, Text Normalization & Chunking Engine**
     - [ ] Text extraction preserving page numbers, section headers, and tabular data.
     - [ ] Clause-aware chunking pipeline with page-level lineage metadata.
     - [ ] Integration of embedding model to generate dense vectors.
@@ -119,5 +130,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 2A) | `pytest tests/ -v` | **PASSED** (60 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 2A Check) | `npm run build` | **PASSED** (built in 191ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 2A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 2B Contract Upload Tests | `pytest tests/test_contract_upload_api.py -v` | **PASSED** (11 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 2B) | `pytest tests/ -v` | **PASSED** (71 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 2B Check) | `npm run build` | **PASSED** (built in 235ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 2B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+
 
 

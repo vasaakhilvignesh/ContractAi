@@ -129,6 +129,17 @@ Format for each record:
 - **Phase:** Phase 2A
 - **Date:** 2026-09-12
 
+### DEC-021: PDF Document Storage, Validation & Re-upload Strategy
+- **Decision:** Local filesystem storage under `backend/storage/contracts/` using generated UUID filenames (`{contract_id}_{token}.pdf`), strict `%PDF-` signature and size limit enforcement, atomic file cleanup on failure, and deterministic re-upload replacement (updating contract record and safely unlinking old file).
+- **Context:** Phase 2B requires storing uploaded PDF files safely, validating their authenticity, preventing path traversal, and avoiding orphaned storage files.
+- **Why this decision was made:** Separating the client-provided filename from the physical filesystem path prevents path traversal attacks (`../../`). Checking `%PDF-` magic bytes prevents file spoofing. Atomic unlinking on DB commit failure prevents disk bloat. Replacing the previous file on re-upload keeps storage aligned with the single-document-per-contract model in Phase 1 without premature versioning complexity.
+- **Alternatives considered:** Database BLOB/BYTEA storage; cloud object storage (S3/GCS) in local development; multi-version document tables.
+- **Why alternatives were rejected:** Storing PDFs as database BLOBs causes database bloat and connection transfer overhead. Cloud object storage adds unnecessary external credentials and operational dependencies for local development. Multi-version tables would require database schema changes and migrations that exceed Phase 2B scope.
+- **Consequences / Trade-offs:** Development storage relies on local filesystem (`backend/storage/contracts/`, ignored by Git). Production deployment (Phase 6) can swap the physical storage backend for S3/GCS using the same relative storage key interface.
+- **Phase:** Phase 2B
+- **Date:** 2026-09-12
+
+
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
 The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
