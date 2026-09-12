@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 3A: PDF Text Extraction** |
+| **Current Phase** | **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 100 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `d6e2b82` ("feat: add contract processing state") |
+| **Last Verified State** | Backend: 132 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `73ab58d` ("feat: add pdf text extraction") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline** |
-| **Exact Next Action** | Commence Phase 3B (Text normalization, clause boundary segmentation, chunking engine with page-level lineage metadata). |
+| **Next Phase** | **Phase 4A: Embedding Provider & pgvector Ingestion** |
+| **Exact Next Action** | Commence Phase 4A (Dense embedding provider selection, vector generation, and pgvector insertion). |
 
 ---
 
@@ -85,10 +85,17 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Synchronous extraction endpoint: `POST /contracts/{contract_id}/extract` (and `/api/v1` alias).
     - [x] Updates `Contract.page_count` in Neon PostgreSQL; zero schema migrations required.
     - [x] 19 comprehensive unit and integration tests in `backend/tests/test_pdf_extraction.py` (100 total backend tests passing).
-  - [ ] **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline**
-    - [ ] Text normalization and cleaning without semantic alteration.
-    - [ ] Clause-aware chunking pipeline with page-level lineage metadata and boundary segmentation.
-  - [ ] **Phase 3C: Dense Embedding Generation & pgvector Insertion**
+  - [x] **Phase 3B: Text Normalization & Clause-Aware Chunking Pipeline** *(Completed)*
+    - [x] Defined strongly typed Pydantic v2 chunk schemas (`ChunkBase`, `ChunkCreate`, `ChunkResponse`, `ContractChunkingResponse`, `ContractChunkListResponse`, `DocumentChunkSummary`).
+    - [x] Conservative, non-destructive text normalization service (`text_normalization_service.py`) supporting NFKC ligature resolution, safe soft-hyphen/line-break healing, CRLF/blank line collapse, and uppercase/number/currency preservation.
+    - [x] Deterministic clause-aware chunking engine (`chunking_service.py`) with legal section/article/clause detection and cross-page header propagation.
+    - [x] Page-bounded chunk construction with 1-indexed `page_number` and contiguous global `chunk_index`.
+    - [x] Accurate `char_start` and `char_end` tracking relative to normalized page text.
+    - [x] Atomic and idempotent database persistence to `document_chunks` table with `embedding=None`.
+    - [x] REST API endpoints `POST /contracts/{id}/chunk` and `GET /contracts/{id}/chunks` with `/api/v1` versioned aliases.
+    - [x] Zero database migrations required; fully compatible with initial schema.
+    - [x] 32 comprehensive unit and integration tests in `backend/tests/test_chunking.py` (132 total backend tests passing).
+  - [ ] **Phase 4A: Embedding Provider & pgvector Ingestion**
     - [ ] Integration of embedding model to generate dense vectors.
     - [ ] Insertion of document chunks into PostgreSQL with pgvector embeddings.
 - [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
@@ -161,6 +168,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 3A) | `pytest tests/ -v` | **PASSED** (100 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 3A Check) | `npm run build` | **PASSED** (built in 212ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 3A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 3B Chunking Tests | `pytest tests/test_chunking.py -v` | **PASSED** (32 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 3B) | `pytest tests/ -v` | **PASSED** (132 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 3B Check) | `npm run build` | **PASSED** (built in 427ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 3B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

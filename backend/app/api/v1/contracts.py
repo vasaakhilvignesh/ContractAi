@@ -26,8 +26,18 @@ from app.schemas.contract import (
     ContractProcessingStatusUpdate,
     ProcessingStatus,
 )
+from app.schemas.chunk import (
+    ContractChunkingResponse,
+    ContractChunkListResponse,
+    DocumentChunkSummary,
+)
 from app.schemas.extraction import ContractExtractionResponse
-from app.services import contract_service, storage_service, pdf_extraction_service
+from app.services import (
+    contract_service,
+    storage_service,
+    pdf_extraction_service,
+    chunking_service,
+)
 
 
 
@@ -451,6 +461,189 @@ def extract_contract_text(
         page_count=db_contract.page_count,
         message=message,
     )
+
+
+@router.post(
+    "/{contract_id}/chunk",
+    response_model=ContractChunkingResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Normalize text and generate clause-aware chunks from contract",
+    description=(
+        "Extracts text, performs conservative normalization, segments text into clause-aware "
+        "chunks preserving page lineage and section headers, and idempotently persists "
+        "DocumentChunk records in an atomic transaction."
+    ),
+)
+def chunk_contract(
+    contract_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ContractChunkingResponse:
+    """Normalize text and generate clause-aware chunks from uploaded contract."""
+    # 1. Verify contract exists
+    db_contract = contract_service.get_contract(db=db, contract_id=contract_id)
+    if not db_contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+
+    # 2. Verify file has been uploaded
+    if not db_contract.file_storage_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot chunk document: no file has been uploaded for this contract.",
+        )
+
+    # 3. Perform text extraction using Phase 3A service
+    try:
+        extraction_result = pdf_extraction_service.extract_contract_document(
+            storage_key=db_contract.file_storage_key,
+            contract_id=db_contract.id,
+        )
+    except pdf_extraction_service.PDFNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Physical contract PDF file not found on disk.",
+        )
+    except pdf_extraction_service.PDFPathTraversalError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path security violation: storage key attempts directory traversal.",
+        )
+    except pdf_extraction_service.PDFEncryptedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except (
+        pdf_extraction_service.PDFCorruptedError,
+        pdf_extraction_service.PDFPageLimitExceededError,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during PDF text extraction.",
+        )
+
+    # 4. Scanned and empty document rejection
+    if (
+        extraction_result.is_scanned
+        or extraction_result.extraction_status == "scanned_requires_ocr"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot chunk scanned contract document: native text extraction yielded no text layer (OCR required).",
+        )
+
+    if extraction_result.total_pages == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot chunk contract document: file contains 0 pages.",
+        )
+
+    # 5. Execute clause-aware chunking pipeline
+    try:
+        chunks_to_create = chunking_service.chunk_extraction_result(extraction_result)
+    except chunking_service.ScannedDocumentChunkingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except chunking_service.EmptyDocumentChunkingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate chunks from contract text: {exc}",
+        )
+
+    # 6. Idempotently persist chunks inside atomic transaction
+    try:
+        db_chunks = chunking_service.persist_contract_chunks(
+            db=db,
+            contract_id=db_contract.id,
+            chunks=chunks_to_create,
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to persist document chunks in database.",
+        )
+
+    # 7. Update contract page_count if not already populated
+    if not db_contract.page_count or db_contract.page_count != extraction_result.total_pages:
+        db_contract.page_count = extraction_result.total_pages
+        db.commit()
+        db.refresh(db_contract)
+
+    # 8. Construct sample chunk summaries
+    samples = [
+        DocumentChunkSummary(
+            id=chk.id,
+            page_number=chk.page_number,
+            chunk_index=chk.chunk_index,
+            section_header=chk.section_header,
+            text_snippet=chk.text[:120] + "..." if len(chk.text) > 120 else chk.text,
+            char_count=len(chk.text),
+        )
+        for chk in db_chunks[:5]
+    ]
+
+    return ContractChunkingResponse(
+        contract_id=db_contract.id,
+        total_chunks=len(db_chunks),
+        total_pages=extraction_result.total_pages,
+        processing_status=db_contract.processing_status,
+        sample_chunks=samples,
+        message=(
+            f"Successfully generated and persisted {len(db_chunks)} clause-aware "
+            f"chunks across {extraction_result.total_pages} pages."
+        ),
+    )
+
+
+@router.get(
+    "/{contract_id}/chunks",
+    response_model=ContractChunkListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List document chunks for contract",
+    description="Retrieves a paginated list of persisted DocumentChunk records for a contract.",
+)
+def list_contract_chunks(
+    contract_id: uuid.UUID,
+    offset: int = Query(0, ge=0, description="Number of chunks to skip"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of chunks to return"),
+    db: Session = Depends(get_db),
+) -> ContractChunkListResponse:
+    """List document chunks with pagination."""
+    db_contract = contract_service.get_contract(db=db, contract_id=contract_id)
+    if not db_contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+
+    items, total = chunking_service.list_contract_chunks(
+        db=db,
+        contract_id=contract_id,
+        offset=offset,
+        limit=limit,
+    )
+    return ContractChunkListResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
 
 
 

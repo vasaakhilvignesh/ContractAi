@@ -22,6 +22,15 @@ from app.schemas.extraction import (
     ContractExtractionResponse,
 )
 
+from app.schemas.chunk import (
+    ChunkBase,
+    ChunkCreate,
+    ChunkResponse,
+    ContractChunkingResponse,
+    ContractChunkListResponse,
+    DocumentChunkSummary,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -38,6 +47,12 @@ __all__ = [
     "PageExtraction",
     "ExtractionResult",
     "ContractExtractionResponse",
+    "ChunkBase",
+    "ChunkCreate",
+    "ChunkResponse",
+    "ContractChunkingResponse",
+    "ContractChunkListResponse",
+    "DocumentChunkSummary",
 ]
 
 

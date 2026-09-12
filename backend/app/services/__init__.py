@@ -32,6 +32,22 @@ from app.services.pdf_extraction_service import (
     extract_contract_document,
 )
 
+from app.services.text_normalization_service import (
+    normalize_text,
+    is_noise_text,
+)
+
+from app.services.chunking_service import (
+    ChunkingError,
+    ScannedDocumentChunkingError,
+    EmptyDocumentChunkingError,
+    is_heading_line,
+    chunk_page_text,
+    chunk_extraction_result,
+    persist_contract_chunks,
+    list_contract_chunks,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -54,6 +70,16 @@ __all__ = [
     "resolve_pdf_path",
     "extract_text_from_pdf",
     "extract_contract_document",
+    "normalize_text",
+    "is_noise_text",
+    "ChunkingError",
+    "ScannedDocumentChunkingError",
+    "EmptyDocumentChunkingError",
+    "is_heading_line",
+    "chunk_page_text",
+    "chunk_extraction_result",
+    "persist_contract_chunks",
+    "list_contract_chunks",
 ]
 
 

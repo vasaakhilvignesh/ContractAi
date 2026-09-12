@@ -161,16 +161,21 @@ Format for each record:
 - **Phase:** Phase 3A
 - **Date:** 2026-09-12
 
+### DEC-009: Text Normalization & Clause-Aware Document Chunking Strategy
+- **Decision:** Conservative non-destructive text normalization and clause-aware document chunking with structural heading propagation, page-bounded segmentation, character offsets relative to normalized page text, and atomic idempotent persistence into `DocumentChunk` (with `embedding=None`).
+- **Context:** Phase 3B requires transforming raw extraction text into discrete, semantically coherent evidence chunks for downstream embedding and vector search without splitting legal clauses arbitrarily across sentences.
+- **Why this decision was made:** Legal contracts are structured by Sections, Articles, and numbered clauses. Chunking within 1-indexed page boundaries guarantees deterministic page citations. Propagating the nearest enclosing section header (`section_header`) preserves legal context when clauses span page breaks. Conservative normalization (NFKC, CRLF/CR to LF, horizontal whitespace and blank line collapse, soft-hyphen healing) preserves exact casing, currency figures ($), percentages (%), and punctuation without altering legal meaning. Atomic deletion and replacement within a single transaction ensures idempotency without orphaned records.
+- **Alternatives considered:** Generic recursive character splitter (LangChain); Markdown conversion; naive sliding character windows.
+- **Why alternatives were rejected:** Generic character splitters slice clauses blindly across sentences and legal terms, losing structural provenance and producing unreliable page citations. Markdown conversion adds parsing dependencies and risks formatting artifacts.
+- **Consequences / Trade-offs:** Character offsets (`char_start`, `char_end`) refer to normalized page text rather than raw PDF coordinates. Chunks remain bounded to individual pages; oversized clauses (> 2,000 chars) are partitioned at sentence boundaries with a rolling 150-char overlap.
+- **Phase:** Phase 3B
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
 The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
-
-### DEC-009: Document Chunking Strategy
-- **Status:** **Not decided yet.**
-- **Candidates:** Recursive character splitter, clause-aware semantic boundary chunking, Markdown/header-aware chunking.
-- **Considerations:** Contract clauses must not be split arbitrarily across sentences; chunk metadata must retain exact page numbers and clause section identifiers.
 
 ### DEC-010: Embedding Model
 - **Status:** **Not decided yet.**

@@ -124,7 +124,9 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── POST   /contracts/{contract_id}/upload            (validate, store PDF & associate with contract)
    │         ├── GET    /contracts/{contract_id}/processing-status (retrieve current document processing state)
    │         ├── PATCH  /contracts/{contract_id}/processing-status (transition processing lifecycle state)
-   │         └── POST   /contracts/{contract_id}/extract           (safely load PDF, extract page text & blocks, update page_count)
+   │         ├── POST   /contracts/{contract_id}/extract           (safely load PDF, extract page text & blocks, update page_count)
+   │         ├── POST   /contracts/{contract_id}/chunk             (normalize text, clause-aware chunking, persist to DocumentChunk)
+   │         └── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
@@ -209,8 +211,9 @@ Contract PDF Upload
    │ (Extract page text, layout blocks & metrics into ExtractionResult; detect scanned docs)
    │ [Lineage Flow: uploaded PDF → PyMuPDF → ExtractionResult → Phase 3B Chunking]
    ▼
-3. Chunking & Boundary Segmentation
-   │ (Clause-aware chunking, keeping chunk + page metadata)
+3. Text Normalization & Clause-Aware Chunking (Phase 3B — IMPLEMENTED)
+   │ (Conservative normalization, clause-aware chunking with page lineage & DocumentChunk persistence)
+   │ [Lineage Flow: ExtractionResult → Normalization → Clause-Aware Chunking → DocumentChunk]
    ▼
 4. Embedding Generation
    │ (Compute dense vectors for all chunks via embedding model)
