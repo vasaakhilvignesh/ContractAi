@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 4B: Document Chunk Embedding & pgvector Persistence** |
+| **Current Phase** | **Phase 4C: Vector Column Typing, Indexing & Retrieval Preparation** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 168 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `3a11942` ("feat: add embedding provider abstraction") |
+| **Last Verified State** | Backend: 176 passed, 0 skipped (`pytest`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `827a20c` ("feat: add contract embedding generation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 4C: Vector Column Typing, Indexing & Retrieval Preparation** |
-| **Exact Next Action** | Implement Vector(768) type migration, vector index (HNSW/IVFFlat), and semantic retrieval infrastructure. |
+| **Next Phase** | **Phase 5A: Semantic Vector Retrieval Engine** |
+| **Exact Next Action** | Implement query embedding generation, cosine similarity search service, top-k retrieval, and relevance filtering. |
 
 ---
 
@@ -115,7 +115,16 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] REST API endpoints `POST /contracts/{contract_id}/embed` and `/api/v1/contracts/{contract_id}/embed`.
   - [x] Zero database migrations required; preserves existing schema and untyped `Vector` column.
   - [x] 13 comprehensive unit/integration tests in `backend/tests/test_embedding_generation.py` (100% mocked, zero real API keys/calls).
-- [ ] **Phase 3: Hybrid Search & RAG Retrieval Engine**
+- [x] **Phase 4C: Vector Column Typing, Indexing & Retrieval Preparation** *(Completed)*
+  - [x] Configured `DocumentChunk.embedding` model to use `Vector(768)` linking to `settings.embedding_dimension`.
+  - [x] Created Alembic migration `18338ecd31a9_typed_vector_and_hnsw_index` altering column from untyped vector to `vector(768)`.
+  - [x] Preserved `nullable=True` to support un-embedded chunks.
+  - [x] Created HNSW index `idx_document_chunks_embedding_hnsw` on `document_chunks` using `vector_cosine_ops` with pgvector defaults (`m=16, ef_construction=64`).
+  - [x] Implemented and verified safe, reversible downgrade path reverting column to untyped vector and dropping HNSW index.
+  - [x] Implemented 8 focused schema and database tests in `backend/tests/test_vector_schema.py` verifying model definition, database catalog type, HNSW index metadata, nullability, 768-dim vector persistence, and dimension mismatch rejection.
+  - [x] All 176 backend tests passing against live Neon PostgreSQL (100% pass rate).
+  - [x] Semantic retrieval strictly deferred to Phase 5A; zero search or retrieval endpoints introduced.
+- [ ] **Phase 5: Hybrid Search & Semantic Retrieval Engine**
   - [ ] Keyword full-text search implementation (tsvector / BM25).
   - [ ] Semantic vector search implementation (pgvector cosine similarity).
   - [ ] Hybrid retrieval fusion (Reciprocal Rank Fusion - RRF).
@@ -197,6 +206,12 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Full Suite Verification (Phase 4B) | `pytest tests/ -v` | **PASSED** (168 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-12 | Frontend Build (Phase 4B Check) | `npm run build` | **PASSED** (built in 472ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 4B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-12 | Phase 4C Alembic Migration | `alembic upgrade head` | **PASSED** (applied revision `18338ecd31a9_typed_vector_and_hnsw_index`) |
+| 2026-09-12 | Phase 4C Alembic Downgrade Reversibility | `alembic downgrade -1` & `upgrade head` | **PASSED** (reversibility verified on live Neon PostgreSQL) |
+| 2026-09-12 | Phase 4C Vector Schema & HNSW Tests | `pytest tests/test_vector_schema.py -v` | **PASSED** (8 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Full Suite Verification (Phase 4C) | `pytest tests/ -v` | **PASSED** (176 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-12 | Frontend Build (Phase 4C Check) | `npm run build` | **PASSED** (built in 213ms, 0 errors) |
+| 2026-09-12 | TypeScript Verification (Phase 4C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 
 
 

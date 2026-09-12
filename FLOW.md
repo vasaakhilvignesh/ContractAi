@@ -146,10 +146,10 @@ Relational Models (`backend/app/models/`):
    └── AuditEvent       (Tamper-evident append-only activity log)
    │
    ▼ Migrations (`backend/alembic/`)
-Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema` applied to Neon PostgreSQL
+Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema` and Phase 4C migration `18338ecd31a9_typed_vector_and_hnsw_index` applied to Neon PostgreSQL
    │
    ▼ Primary Database (`Neon PostgreSQL` + `pgvector`)
-All 7 relational tables + vector column + 12 foreign keys created and active
+All 7 relational tables + Vector(768) column + HNSW index (vector_cosine_ops) + 12 foreign keys active
 ```
 
 **Evidence Lineage Flow (Implemented in Schema & Live in Neon):**
@@ -227,9 +227,9 @@ Contract PDF Upload
    │  guarantees N inputs -> N outputs with preserved ordering;
    │  persists 768-dim dense vectors into DocumentChunk.embedding with idempotency)
    ▼
-5. Dual Indexing in PostgreSQL
-   ├── Vector Index: Chunks & embeddings inserted into pgvector
-   └── Keyword Index: Full-text search tsvector generated for keyword matching
+5. Vector Column Typing & HNSW Indexing (Phase 4C — IMPLEMENTED)
+   ├── Vector Index: DocumentChunk.embedding typed as Vector(768) with HNSW index (vector_cosine_ops) in pgvector
+   └── Keyword Index: Full-text search tsvector generated for keyword matching (Planned)
    │
    ▼
 6. Structured Clause & Fact Extraction

@@ -9,18 +9,10 @@ Evidence lineage:
 
 pgvector integration:
   The `embedding` column stores the dense vector representation of the
-  chunk text. Dimension is intentionally left unspecified at model level
-  until the embedding model is finalized (DEC-010 — PENDING).
-
-  DECISION NOTE (DEC-010 pending):
-    The vector dimension must match the embedding model's output dimension:
-      - text-embedding-3-small  → 1536
-      - text-embedding-004      → 768
-      - bge-small-en-v1.5       → 384
-    Until DEC-010 is resolved, the column is declared as `Vector` without
-    a fixed dimension. Alembic will generate `vector` without dimension
-    constraint, which PostgreSQL/pgvector supports and which allows
-    dimension to be enforced at query time or via an index definition.
+  chunk text. Dimension is finalized at 768 dimensions for Google Gemini
+  gemini-embedding-2 (DEC-024).
+  Alembic migration enforces Vector(768) and creates an HNSW index
+  with vector_cosine_ops for approximate nearest-neighbor search.
 
 Key design decisions:
   - page_number: Critical for citation. Every chunk records its source page.
@@ -45,25 +37,20 @@ except ImportError:
     Vector = None  # type: ignore[assignment]
     _PGVECTOR_AVAILABLE = False
 
+from app.core.config import settings
 from app.db.base import Base
 
 
-# Embedding dimension — PENDING DEC-010 decision on embedding model.
-# None means the column is declared without a fixed dimension constraint.
-# Update this constant when DEC-010 is resolved.
-EMBEDDING_DIMENSION: int | None = None
+# Embedding dimension: 768 dimensions for Google Gemini gemini-embedding-2 (DEC-024).
+EMBEDDING_DIMENSION: int = settings.embedding_dimension
 
 
 def _vector_column():
     """
     Returns the appropriate SQLAlchemy column type for the embedding.
-    Uses pgvector.sqlalchemy.Vector if available, otherwise falls back
-    to a placeholder Text column. The fallback exists only for environments
-    where the pgvector Python package is not yet installed; it must be
-    replaced with Vector in any environment that runs migrations.
+    Uses pgvector.sqlalchemy.Vector(768) if available, otherwise raises RuntimeError.
     """
     if _PGVECTOR_AVAILABLE and Vector is not None:
-        # EMBEDDING_DIMENSION=None → pgvector stores it as untyped vector
         return Vector(EMBEDDING_DIMENSION)
     # This fallback should never reach production migration.
     raise RuntimeError(
@@ -145,8 +132,9 @@ class DocumentChunk(Base):
         _vector_column(),
         nullable=True,
         comment=(
-            "Dense vector embedding of chunk text. "
-            "Populated in Phase 2. Dimension TBD pending DEC-010."
+            "Dense 768-dimensional vector embedding of chunk text. "
+            "Populated via Gemini gemini-embedding-2 in Phase 4B. "
+            "Indexed with HNSW (vector_cosine_ops) in Phase 4C."
         ),
     )
 

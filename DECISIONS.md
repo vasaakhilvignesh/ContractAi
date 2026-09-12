@@ -191,6 +191,16 @@ Format for each record:
 - **Phase:** Phase 4B
 - **Date:** 2026-09-12
 
+### DEC-024: Typed Vector(768) Schema Migration and HNSW Indexing for Contract Chunks
+- **Decision:** Enforce `Vector(768)` on `document_chunks.embedding` via Alembic migration (`18338ecd31a9`), preserve `nullable=True`, configure the SQLAlchemy model via `settings.embedding_dimension`, and create an HNSW index `idx_document_chunks_embedding_hnsw` using `vector_cosine_ops`.
+- **Context:** Following Phase 4B embedding persistence, Phase 4C finalizes database schema typing and index infrastructure in preparation for semantic vector retrieval.
+- **Why this decision was made:** Google Gemini embedding model is `gemini-embedding-2`, and embeddings are 768-dimensional dense vectors. PostgreSQL stores them as `Vector(768)`. Enforcing `Vector(768)` at the PostgreSQL engine level prevents dimensionality mismatch errors and guarantees data integrity. Cosine similarity is the target similarity metric for unit-normalized retrieval vectors. HNSW with `vector_cosine_ops` is used for approximate nearest-neighbor retrieval preparation because it is an appropriate pgvector index for cosine similarity and does not require training data or pre-existing rows (unlike IVFFlat which requires existing centroid data). Using pgvector defaults (`m=16, ef_construction=64`) avoids speculative tuning and maintains architectural simplicity (Rules 10 & 11).
+- **Alternatives considered:** Untyped `Vector(None)`; IVFFlat index; postponing index creation to retrieval phase.
+- **Why alternatives were rejected:** Untyped vectors permit silent dimensionality corruption. IVFFlat cannot be properly built on an empty or sparsely populated table without subsequent re-indexing. Creating the index in Phase 4C completes storage and indexing infrastructure, establishing a clear phase boundary before Phase 5A.
+- **Consequences / Trade-offs:** Vector inserts with dimensions other than 768 are rejected by both SQLAlchemy/pgvector and PostgreSQL. Index graph updates incrementally on new chunk insertions. Query retrieval, similarity scoring, and top-k filtering belong strictly to Phase 5A (retrieval is NOT implemented in Phase 4C).
+- **Phase:** Phase 4C
+- **Date:** 2026-09-12
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

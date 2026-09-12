@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 4B Complete (Document Chunk Embedding & Persistence Verified)  
+> **Status:** Phase 4C Complete (Vector Column Typing & HNSW Indexing Verified)  
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
