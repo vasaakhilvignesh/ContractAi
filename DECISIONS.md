@@ -309,6 +309,16 @@ Format for each record:
 - **Phase:** Phase 8A–8D
 - **Date:** 2026-09-13
 
+### DEC-036: Grounded RAG Generation & Deterministic Citation Validation
+- **Decision:** Implement a bounded, strictly grounded RAG generation pipeline (`answer_contract_query_grounded`, `build_grounded_context`, `verify_citation`) that couples hybrid retrieval (pgvector cosine + PostgreSQL FTS via RRF) with structured Pydantic answer schema generation (`StructuredRAGAnswerLLM`). Enforce deterministic citation verification: every claim citation is cross-validated against retrieved chunks for contract ownership, page number match, and verbatim text presence. If hybrid retrieval yields 0 matches or drops below minimum score threshold, or if LLM signals insufficient evidence, immediately return a safe, grounded not-found response without inventing contractual facts. Maintain strict lineage: `answer → claim → citation/evidence → chunk → page → contract`.
+- **Context:** Core ContractIQ design rule 12 mandates: *RAG finds evidence. Structured extraction turns evidence into data. Deterministic rules turn structured data into actionable risk intelligence. Answers must always link to verifiable, page-level clause citations.*
+- **Why this decision was made:** Legal question answering requires zero tolerance for hallucinated contractual commitments or fictitious clause citations. By enforcing confidence gating, bounding context to top-ranked chunks, requiring structured claim-by-claim citations, and validating citation verbatim text and page numbers against the database, the system produces explainable, auditable answers where every assertion is proven by physical contract text.
+- **Alternatives considered:** Freeform markdown generation with post-hoc regex parsing; relying entirely on LLM self-verification without programmatic citation matching; generating answers without chunk/page bounding.
+- **Why alternatives were rejected:** Freeform markdown outputs frequently hallucinate fake page numbers and non-existent clause references. Unbounded or unverified LLM answers cannot be audited or defended in enterprise procurement workflows.
+- **Consequences / Trade-offs:** Queries asking for information not present in the contract receive explicit insufficient-evidence responses rather than speculative answers.
+- **Phase:** Phase 9A–9E
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

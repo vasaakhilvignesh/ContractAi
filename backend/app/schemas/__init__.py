@@ -104,6 +104,18 @@ from app.schemas.risk import (
     RiskSignalListResponse,
 )
 
+from app.schemas.rag import (
+    RAGStatus,
+    CitationVerificationStatus,
+    RAGQueryRequest,
+    RAGCitation,
+    AnswerClaim,
+    LLMCitationItem,
+    LLMClaimItem,
+    StructuredRAGAnswerLLM,
+    RAGQueryResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -178,4 +190,13 @@ __all__ = [
     "RiskEvaluationRequest",
     "RiskEvaluationResponse",
     "RiskSignalListResponse",
+    "RAGStatus",
+    "CitationVerificationStatus",
+    "RAGQueryRequest",
+    "RAGCitation",
+    "AnswerClaim",
+    "LLMCitationItem",
+    "LLMClaimItem",
+    "StructuredRAGAnswerLLM",
+    "RAGQueryResponse",
 ]

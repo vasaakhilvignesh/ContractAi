@@ -72,6 +72,10 @@ from app.schemas.risk import (
     RiskEvaluationResponse,
     RiskSignalListResponse,
 )
+from app.schemas.rag import (
+    RAGQueryRequest,
+    RAGQueryResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -86,6 +90,7 @@ from app.services import (
     contract_fact_service,
     evidence_service,
     risk_service,
+    rag_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -1484,4 +1489,49 @@ def list_contract_risks(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while listing risk signals: {exc}",
+        )
+
+
+# ====================================================================
+# Phase 9: Grounded RAG Generation Endpoint
+# ====================================================================
+
+@router.post(
+    "/{contract_id}/query/grounded",
+    response_model=RAGQueryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ask a grounded question about the contract with citations",
+    description=(
+        "Answers natural language contract inquiries strictly based on retrieved evidence chunks. "
+        "Performs hybrid retrieval, context construction, grounded LLM generation, and deterministic "
+        "citation verification. Returns structured claims and citations with full provenance: "
+        "answer → claim → citation → chunk → page → contract."
+    ),
+)
+async def query_contract_grounded(
+    contract_id: uuid.UUID,
+    payload: RAGQueryRequest,
+    db: Session = Depends(get_db),
+) -> RAGQueryResponse:
+    """Execute grounded RAG query with deterministic citation validation."""
+    try:
+        return await rag_service.answer_contract_query_grounded(
+            db=db,
+            contract_id=contract_id,
+            request=payload,
+        )
+    except rag_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except rag_service.RAGServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during grounded RAG query: {exc}",
         )

@@ -169,6 +169,14 @@ from app.services.risk_service import (
     list_contract_risk_signals,
 )
 
+from app.services.rag_service import (
+    RAGServiceError,
+    ContractNotFoundError as RAGContractNotFoundError,
+    build_grounded_context,
+    verify_citation,
+    answer_contract_query_grounded,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -276,4 +284,9 @@ __all__ = [
     "RiskEvaluationError",
     "evaluate_and_persist_contract_risks",
     "list_contract_risk_signals",
+    "RAGServiceError",
+    "RAGContractNotFoundError",
+    "build_grounded_context",
+    "verify_citation",
+    "answer_contract_query_grounded",
 ]
