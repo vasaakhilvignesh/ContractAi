@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 6C: Structured Obligation Extraction** |
+| **Current Phase** | **Phase 6D: Structured Contract Fact Extraction** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 13 passed (`test_obligation_extraction.py`), 38 passed (`test_clause_extraction.py`, `test_structured_output.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `1ea0b3a` ("feat: add clause extraction") |
+| **Last Verified State** | Backend: 13 passed (`test_contract_fact_extraction.py`), 13 passed (`test_obligation_extraction.py`), 13 passed (`test_clause_extraction.py`), 25 passed (`test_structured_output.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `9125165` ("feat: add obligation extraction") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 6D: Structured Contract Fact Extraction / Deterministic Risk Rules** |
-| **Exact Next Action** | Implement structured contract fact extraction (notice period, liability cap, governing law) and deterministic risk rules. |
+| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7: Frontend Integration** |
+| **Exact Next Action** | Implement deterministic risk rule evaluation over structured contract facts and clauses to generate RiskSignal records. |
 
 ---
 
@@ -195,8 +195,15 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Robust error handling against malformed or missing structured LLM outputs.
     - [x] Added REST API endpoints `POST /contracts/{contract_id}/extract-obligations` and `GET /contracts/{contract_id}/obligations` (with versioned `/api/v1` aliases).
     - [x] 13 comprehensive unit and integration tests in `backend/tests/test_obligation_extraction.py` (100% pass rate).
-  - [ ] **Phase 6D: Structured Contract Fact Extraction & Deterministic Risk Rules**
-    - [ ] Structured contract fact extraction (notice period, liability cap, governing law).
+  - [x] **Phase 6D: Structured Contract Fact Extraction** *(Completed)*
+    - [x] Defined Pydantic v2 schemas (`FactKey`, `ExtractedFactLLM`, `ClauseFactExtractionResult`, `ContractFactBase`, `ContractFactResponse`, `ContractFactExtractionRequest`, `ContractFactExtractionResponse`, `ContractFactListResponse`).
+    - [x] Implemented standalone `contract_fact_service.py` extracting contract-level facts (effective date, expiration date, contract value, payment terms, currency, parties, governing law, notice period, renewal term, termination notice period, liability cap, etc.) using Phase 6A `StructuredLLMProvider`.
+    - [x] Preserved strict 5-tier evidence lineage: `fact → source clause → chunk → page → contract`.
+    - [x] Implemented database persistence with `contract_facts` table and Alembic migration `e41a982f63cb_add_contract_facts_table`.
+    - [x] Implemented idempotency (returns existing facts on rerun unless `force_reextract=True`).
+    - [x] Added REST API endpoints `POST /contracts/{contract_id}/extract-facts` and `GET /contracts/{contract_id}/facts` (with versioned `/api/v1` aliases).
+    - [x] 13 comprehensive unit and integration tests in `backend/tests/test_contract_fact_extraction.py` (100% pass rate).
+  - [ ] **Phase 6E: Deterministic Risk Rules & Risk Signals**
     - [ ] Implementation of deterministic business risk rules (notice period thresholds, uncapped liability, auto-renewal deadlines).
     - [ ] Generation and database persistence of `RiskSignal` records.
 - [ ] **Phase 7: Frontend Integration & Live API Wiring**
@@ -312,3 +319,11 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-13 | Python Bytecode Compilation (Phase 6C) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-13 | Frontend Build (Phase 6C Check) | `npm run build` | **PASSED** (built in 626ms, 0 errors) |
 | 2026-09-13 | TypeScript Verification (Phase 6C Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-13 | Phase 6D Alembic Migration | `alembic upgrade head` | **PASSED** (applied revision `e41a982f63cb_add_contract_facts_table`) |
+| 2026-09-13 | Phase 6D Contract Fact Extraction Tests | `pytest tests/test_contract_fact_extraction.py -v` | **PASSED** (13 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-13 | Phase 6C Regression Verification | `pytest tests/test_obligation_extraction.py -v` | **PASSED** (13 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-13 | Phase 6B Regression Verification | `pytest tests/test_clause_extraction.py -v` | **PASSED** (13 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-13 | Phase 6A Regression Verification | `pytest tests/test_structured_output.py -v` | **PASSED** (25 passed, 0 skipped, 100% mocked) |
+| 2026-09-13 | Python Bytecode Compilation (Phase 6D) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-13 | Frontend Build (Phase 6D Check) | `npm run build` | **PASSED** (built in 435ms, 0 errors) |
+| 2026-09-13 | TypeScript Verification (Phase 6D Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |

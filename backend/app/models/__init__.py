@@ -25,6 +25,7 @@ from app.models.clause import Clause
 # Level 4: Depends on contracts + clauses + document_chunks
 from app.models.obligation import Obligation
 from app.models.risk_signal import RiskSignal
+from app.models.contract_fact import ContractFact
 
 # Level 5: Depends on users + contracts
 from app.models.audit_event import AuditEvent
@@ -36,5 +37,6 @@ __all__ = [
     "Clause",
     "Obligation",
     "RiskSignal",
+    "ContractFact",
     "AuditEvent",
 ]

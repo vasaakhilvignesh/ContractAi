@@ -70,6 +70,17 @@ from app.schemas.obligation import (
     ContractObligationListResponse,
 )
 
+from app.schemas.contract_fact import (
+    FactKey,
+    ExtractedFactLLM,
+    ClauseFactExtractionResult,
+    ContractFactBase,
+    ContractFactResponse,
+    ContractFactExtractionRequest,
+    ContractFactExtractionResponse,
+    ContractFactListResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -119,4 +130,12 @@ __all__ = [
     "ContractObligationExtractionRequest",
     "ContractObligationExtractionResponse",
     "ContractObligationListResponse",
+    "FactKey",
+    "ExtractedFactLLM",
+    "ClauseFactExtractionResult",
+    "ContractFactBase",
+    "ContractFactResponse",
+    "ContractFactExtractionRequest",
+    "ContractFactExtractionResponse",
+    "ContractFactListResponse",
 ]

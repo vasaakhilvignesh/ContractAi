@@ -269,6 +269,16 @@ Format for each record:
 - **Phase:** Phase 6C
 - **Date:** 2026-09-13
 
+### DEC-032: Contract Fact Extraction Architecture, Schema & Evidence Lineage
+- **Decision:** Extract structured contract-level facts (effective date, expiration date, contract value, payment terms, currency, parties, governing law, notice period, renewal term, termination notice period, liability cap, dispute forum, etc.) from previously extracted `Clause` records using `StructuredLLMProvider` (`gemini-2.5-flash` with `ClauseFactExtractionResult` Pydantic schema). Apply Alembic migration (`e41a982f63cb`) creating the dedicated `contract_facts` table with columns `contract_id`, `source_clause_id`, `source_chunk_id`, `fact_key`, `fact_value`, `fact_value_json`, `verbatim_evidence`, `page_number`, and `confidence`. Preserve strict 5-tier evidence lineage (`fact → source clause → chunk → page → contract`). Implement idempotent execution where rerun returns existing facts without calling the LLM unless `force_reextract=True`. Expose REST endpoints `POST /contracts/{contract_id}/extract-facts` and `GET /contracts/{contract_id}/facts` (with versioned `/api/v1` aliases).
+- **Context:** Phase 6D requires extracting reliable, auditable contract-level facts to serve as input data for downstream deterministic risk rule evaluation (Phase 6E) and contract comparison.
+- **Why this decision was made:** Extracting facts from classified clauses bounds the context window, produces precise clause and page citations, and prevents context dilution. Persisting facts in a dedicated `contract_facts` table with explicit foreign keys to `contracts`, `clauses`, and `document_chunks` guarantees referential integrity and transparent citation drill-down. Providing both textual `fact_value` and optional `fact_value_json` supports both scalar facts (dates, periods) and compound facts (party rosters, tiered payment terms). Strict validation prevents the LLM from hallucinating values when a fact is absent from the contract text.
+- **Alternatives considered:** Whole-document fact extraction prompt; extracting facts from raw unchunked PDF text; embedding facts into `contracts` table columns.
+- **Why alternatives were rejected:** Whole-document prompts lose page-level evidence lineage and suffer from context degradation on large contracts. Extracting from raw PDF bypasses clause classification. Storing facts as ad-hoc columns on `contracts` lacks flexibility for variable contractual structures and prevents 1-to-many evidence citations.
+- **Consequences / Trade-offs:** Fact extraction requires clauses to exist; attempting extraction on a contract without clauses returns 400 Bad Request.
+- **Phase:** Phase 6D
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
@@ -286,8 +296,7 @@ The following architectural decisions have **not yet been made** or are partiall
 - **Considerations:** Latency budget vs marginal MRR/NDCG gain.
 
 ### DEC-013: Structured Output Schema & Extraction Technique
-- **Status:** **Resolved in Phase 6A (DEC-029) & Phase 6B (DEC-030):** Pydantic v2 schemas (`ExtractedClauseLLM`, `ChunkClauseExtractionResult`) validated with Phase 6A infrastructure and Gemini JSON schema enforcement.
-- **Remaining Open Question:** Field schemas for obligations and contract facts (to be implemented in downstream extraction phases).
+- **Status:** **Resolved across Phases 6A–6D (DEC-029, DEC-030, DEC-031, DEC-032):** Pydantic v2 schemas (`ChunkClauseExtractionResult`, `ClauseObligationExtractionResult`, `ClauseFactExtractionResult`) validated with Phase 6A infrastructure and Gemini JSON schema enforcement.
 
 ### DEC-014: Deterministic Risk Rule Architecture
 - **Status:** **Not decided yet.**

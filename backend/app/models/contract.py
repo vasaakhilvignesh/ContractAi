@@ -221,6 +221,11 @@ class Contract(Base):
         back_populates="contract",
         cascade="all, delete-orphan",
     )
+    facts: Mapped[list["ContractFact"]] = relationship(  # noqa: F821
+        "ContractFact",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return (

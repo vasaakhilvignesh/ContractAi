@@ -134,7 +134,9 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── POST   /contracts/{contract_id}/extract-clauses       (extract and persist structured clauses preserving lineage)
    │         ├── GET    /contracts/{contract_id}/clauses               (list extracted clauses with optional type filtering)
    │         ├── POST   /contracts/{contract_id}/extract-obligations   (extract and persist structured obligations from clauses)
-   │         └── GET    /contracts/{contract_id}/obligations           (list extracted obligations with party/type/status filtering)
+   │         ├── GET    /contracts/{contract_id}/obligations           (list extracted obligations with party/type/status filtering)
+   │         ├── POST   /contracts/{contract_id}/extract-facts         (extract and persist structured contract facts from clauses)
+   │         └── GET    /contracts/{contract_id}/facts                 (list extracted contract facts with optional fact_key filtering)
    │
    ├── Embedding & Retrieval Layer (`backend/app/services/`):
    │    ├── EmbeddingProvider (ABC with embed_texts & embed_query; RETRIEVAL_DOCUMENT & RETRIEVAL_QUERY task types)
@@ -145,13 +147,14 @@ FastAPI Application (`backend/app/main.py`)
    │    ├── keyword_retrieval_service (Contract-scoped PostgreSQL Full-Text Search, websearch_to_tsquery, ts_rank_cd)
    │    └── hybrid_retrieval_service (Reciprocal Rank Fusion - RRF combining semantic & keyword search)
    │
-   ├── Structured Output & Extraction Layer (Phase 6A, 6B & 6C — `backend/app/services/`):
+   ├── Structured Output & Extraction Layer (Phase 6A, 6B, 6C & 6D — `backend/app/services/`):
    │    ├── StructuredLLMProvider (ABC for vendor-independent structured output generation)
    │    ├── GeminiStructuredOutputProvider (Google Gemini gemini-2.5-flash via google-genai SDK, response_schema mode)
    │    ├── validate_structured_output (Strict Pydantic v2 validation, fence stripping, structured error formatting)
    │    ├── get_structured_llm_provider (Factory function for provider resolution and dependency injection)
    │    ├── clause_extraction_service (Deterministic chunk processing, lineage preservation, idempotent persistence)
-   │    └── obligation_extraction_service (Structured obligation extraction from clauses, lineage preservation, idempotency)
+   │    ├── obligation_extraction_service (Structured obligation extraction from clauses, lineage preservation, idempotency)
+   │    └── contract_fact_service (Structured contract fact extraction from clauses, lineage preservation, idempotency)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):
@@ -160,14 +163,15 @@ Relational Models (`backend/app/models/`):
    ├── DocumentChunk    (Page number, text, chunk index, Vector embedding, search_vector GIN)
    ├── Clause           (Extracted clause, verbatim text, page number, facts)
    ├── Obligation       (Responsible party, deadline, priority, obligation_type, deadline_info, lineage)
+   ├── ContractFact     (Key, value, evidence snippet, page number, confidence, lineage)
    ├── RiskSignal       (Rule ID, severity, verbatim quote, lineage)
    └── AuditEvent       (Tamper-evident append-only activity log)
    │
    ▼ Migrations (`backend/alembic/`)
-Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema`, Phase 4C `18338ecd31a9_typed_vector_and_hnsw_index`, Phase 5B `fd983c1fd05f_add_search_vector_and_gin_index`, and Phase 6C `c82e75f1b94a_add_obligation_type_and_deadline_info` applied to Neon PostgreSQL
+Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema`, Phase 4C `18338ecd31a9_typed_vector_and_hnsw_index`, Phase 5B `fd983c1fd05f_add_search_vector_and_gin_index`, Phase 6C `c82e75f1b94a_add_obligation_type_and_deadline_info`, and Phase 6D `e41a982f63cb_add_contract_facts_table` applied to Neon PostgreSQL
    │
    ▼ Primary Database (`Neon PostgreSQL` + `pgvector`)
-All 7 relational tables + Vector(768) column + HNSW index (vector_cosine_ops) + 12 foreign keys active
+All 8 relational tables + Vector(768) column + HNSW index (vector_cosine_ops) + 15 foreign keys active
 ```
 
 **Evidence Lineage Flow (Implemented in Schema & Live in Neon):**
@@ -179,6 +183,7 @@ Contract (id)
    │       └──► Clause (id, contract_id, source_chunk_id, verbatim_text, page_number)
    │               │
    │               ├──► Obligation (id, contract_id, source_clause_id, source_chunk_id)
+   │               ├──► ContractFact (id, contract_id, source_clause_id, source_chunk_id, fact_key)
    │               └──► RiskSignal (id, contract_id, source_clause_id, source_chunk_id, rule_id)
    │
    └──► AuditEvent (id, contract_id, user_id, event_type, created_at)

@@ -54,6 +54,11 @@ from app.schemas.obligation import (
     ContractObligationExtractionResponse,
     ContractObligationListResponse,
 )
+from app.schemas.contract_fact import (
+    ContractFactExtractionRequest,
+    ContractFactExtractionResponse,
+    ContractFactListResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -65,6 +70,7 @@ from app.services import (
     hybrid_retrieval_service,
     clause_extraction_service,
     obligation_extraction_service,
+    contract_fact_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -1047,4 +1053,90 @@ def get_obligations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while listing obligations: {exc}",
+        )
+
+
+@router.post(
+    "/{contract_id}/extract-facts",
+    response_model=ContractFactExtractionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract structured contract facts from contract clauses",
+    description=(
+        "Extracts structured contract-level facts (effective date, expiration date, value, payment terms, "
+        "currency, parties, governing law, notice period, renewal term, termination notice period, liability cap, etc.) "
+        "from contract clauses using the StructuredLLMProvider. Preserves strict source traceability "
+        "(fact -> source clause -> chunk -> page -> contract). Idempotent unless force_reextract=True."
+    ),
+)
+async def extract_facts(
+    contract_id: uuid.UUID,
+    payload: Optional[ContractFactExtractionRequest] = None,
+    db: Session = Depends(get_db),
+) -> ContractFactExtractionResponse:
+    """Extract and persist structured contract-level facts for a contract."""
+    force = payload.force_reextract if payload else False
+    try:
+        return await contract_fact_service.extract_contract_facts(
+            db=db,
+            contract_id=contract_id,
+            force_reextract=force,
+        )
+    except contract_fact_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except contract_fact_service.NoClausesFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except StructuredOutputConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Structured output provider is not configured: {exc}",
+        )
+    except contract_fact_service.ContractFactExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Contract fact extraction failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during contract fact extraction: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/facts",
+    response_model=ContractFactListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List extracted contract facts for a contract",
+    description="Retrieves all extracted facts for a contract, with optional filtering by fact_key.",
+)
+def get_facts(
+    contract_id: uuid.UUID,
+    fact_key: Optional[str] = Query(
+        default=None,
+        description="Filter by fact key (e.g. effective_date, governing_law, notice_period)",
+    ),
+    db: Session = Depends(get_db),
+) -> ContractFactListResponse:
+    """List persisted contract facts for a contract."""
+    try:
+        return contract_fact_service.list_contract_facts(
+            db=db,
+            contract_id=contract_id,
+            fact_key=fact_key,
+        )
+    except contract_fact_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while listing contract facts: {exc}",
         )

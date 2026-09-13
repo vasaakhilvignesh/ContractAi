@@ -128,6 +128,16 @@ from app.services.obligation_extraction_service import (
     list_contract_obligations,
 )
 
+from app.services.contract_fact_service import (
+    ContractFactExtractionError,
+    ContractNotFoundError as FactContractNotFoundError,
+    NoClausesFoundError as FactNoClausesFoundError,
+    ExtractionProviderError as FactExtractionProviderError,
+    extract_facts_from_clause,
+    extract_contract_facts,
+    list_contract_facts,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -206,4 +216,11 @@ __all__ = [
     "extract_obligations_from_clause",
     "extract_contract_obligations",
     "list_contract_obligations",
+    "ContractFactExtractionError",
+    "FactContractNotFoundError",
+    "FactNoClausesFoundError",
+    "FactExtractionProviderError",
+    "extract_facts_from_clause",
+    "extract_contract_facts",
+    "list_contract_facts",
 ]
