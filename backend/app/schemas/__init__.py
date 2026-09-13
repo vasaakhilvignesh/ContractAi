@@ -59,6 +59,17 @@ from app.schemas.clause import (
     ContractClauseListResponse,
 )
 
+from app.schemas.obligation import (
+    ObligationType,
+    ExtractedObligationLLM,
+    ClauseObligationExtractionResult,
+    ObligationBase,
+    ObligationResponse,
+    ContractObligationExtractionRequest,
+    ContractObligationExtractionResponse,
+    ContractObligationListResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -100,4 +111,12 @@ __all__ = [
     "ContractClauseExtractionRequest",
     "ContractClauseExtractionResponse",
     "ContractClauseListResponse",
+    "ObligationType",
+    "ExtractedObligationLLM",
+    "ClauseObligationExtractionResult",
+    "ObligationBase",
+    "ObligationResponse",
+    "ContractObligationExtractionRequest",
+    "ContractObligationExtractionResponse",
+    "ContractObligationListResponse",
 ]

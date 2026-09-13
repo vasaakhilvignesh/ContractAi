@@ -49,6 +49,11 @@ from app.schemas.clause import (
     ContractClauseExtractionResponse,
     ContractClauseListResponse,
 )
+from app.schemas.obligation import (
+    ContractObligationExtractionRequest,
+    ContractObligationExtractionResponse,
+    ContractObligationListResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -59,6 +64,7 @@ from app.services import (
     keyword_retrieval_service,
     hybrid_retrieval_service,
     clause_extraction_service,
+    obligation_extraction_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -944,4 +950,101 @@ def get_clauses(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while listing clauses: {exc}",
+        )
+
+
+@router.post(
+    "/{contract_id}/extract-obligations",
+    response_model=ContractObligationExtractionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract structured obligations from contract clauses",
+    description=(
+        "Extracts structured contractual obligations (title, description, responsible party, "
+        "obligation type, due date / deadline info, frequency, recurring status, verbatim text) "
+        "from contract clauses using the StructuredLLMProvider. Preserves strict source traceability "
+        "(obligation -> clause -> chunk -> page -> contract). Idempotent unless force_reextract=True."
+    ),
+)
+async def extract_obligations(
+    contract_id: uuid.UUID,
+    payload: Optional[ContractObligationExtractionRequest] = None,
+    db: Session = Depends(get_db),
+) -> ContractObligationExtractionResponse:
+    """Extract and persist structured obligations for a contract."""
+    force = payload.force_reextract if payload else False
+    try:
+        return await obligation_extraction_service.extract_contract_obligations(
+            db=db,
+            contract_id=contract_id,
+            force_reextract=force,
+        )
+    except obligation_extraction_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except obligation_extraction_service.NoClausesFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except StructuredOutputConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Structured output provider is not configured: {exc}",
+        )
+    except obligation_extraction_service.ObligationExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Obligation extraction failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during obligation extraction: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/obligations",
+    response_model=ContractObligationListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List extracted obligations for a contract",
+    description="Retrieves all extracted obligations for a contract, with optional filtering by party, obligation_type, and status.",
+)
+def get_obligations(
+    contract_id: uuid.UUID,
+    responsible_party: Optional[str] = Query(
+        default=None,
+        description="Filter by responsible party (e.g. Vendor, Customer)",
+    ),
+    obligation_type: Optional[str] = Query(
+        default=None,
+        description="Filter by obligation category/type (e.g. payment, reporting, notice)",
+    ),
+    obligation_status: Optional[str] = Query(
+        default=None,
+        alias="status",
+        description="Filter by tracking status (e.g. pending, in_progress, completed)",
+    ),
+    db: Session = Depends(get_db),
+) -> ContractObligationListResponse:
+    """List persisted obligations for a contract."""
+    try:
+        return obligation_extraction_service.list_contract_obligations(
+            db=db,
+            contract_id=contract_id,
+            responsible_party=responsible_party,
+            obligation_type=obligation_type,
+            status=obligation_status,
+        )
+    except obligation_extraction_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while listing obligations: {exc}",
         )

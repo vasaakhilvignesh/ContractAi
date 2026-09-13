@@ -118,6 +118,16 @@ from app.services.clause_extraction_service import (
     list_contract_clauses,
 )
 
+from app.services.obligation_extraction_service import (
+    ObligationExtractionError,
+    ContractNotFoundError as ObligationContractNotFoundError,
+    NoClausesFoundError as ObligationNoClausesFoundError,
+    ExtractionProviderError as ObligationExtractionProviderError,
+    extract_obligations_from_clause,
+    extract_contract_obligations,
+    list_contract_obligations,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -189,4 +199,11 @@ __all__ = [
     "extract_clauses_from_chunk",
     "extract_contract_clauses",
     "list_contract_clauses",
+    "ObligationExtractionError",
+    "ObligationContractNotFoundError",
+    "ObligationNoClausesFoundError",
+    "ObligationExtractionProviderError",
+    "extract_obligations_from_clause",
+    "extract_contract_obligations",
+    "list_contract_obligations",
 ]

@@ -98,6 +98,16 @@ class Obligation(Base):
     # ----------------------------------------------------------------
     # Obligation Attributes
     # ----------------------------------------------------------------
+    obligation_type: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+        comment=(
+            "Type/category of obligation: "
+            "payment | delivery | reporting | notice | confidentiality | "
+            "compliance | audit | insurance | renewal | termination | other"
+        ),
+    )
     responsible_party: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
@@ -109,6 +119,11 @@ class Obligation(Base):
         index=True,
         comment="Specific due date for the obligation, if defined",
     )
+    deadline_info: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Extracted due/deadline description or trigger condition when present",
+    )
     frequency: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
@@ -119,6 +134,10 @@ class Obligation(Base):
         nullable=False,
         default=False,
         comment="Whether this is a recurring obligation",
+    )
+    extraction_confidence: Mapped[float | None] = mapped_column(
+        nullable=True,
+        comment="LLM extraction confidence score (0.0 to 1.0)",
     )
 
     # ----------------------------------------------------------------
