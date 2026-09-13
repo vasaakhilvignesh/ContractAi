@@ -81,6 +81,15 @@ from app.schemas.contract_fact import (
     ContractFactListResponse,
 )
 
+from app.schemas.evidence import (
+    EvidenceSourceItemType,
+    EvidenceBase,
+    EvidenceCreate,
+    EvidenceResponse,
+    EvidenceLineage,
+    EvidenceListResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -138,4 +147,10 @@ __all__ = [
     "ContractFactExtractionRequest",
     "ContractFactExtractionResponse",
     "ContractFactListResponse",
+    "EvidenceSourceItemType",
+    "EvidenceBase",
+    "EvidenceCreate",
+    "EvidenceResponse",
+    "EvidenceLineage",
+    "EvidenceListResponse",
 ]

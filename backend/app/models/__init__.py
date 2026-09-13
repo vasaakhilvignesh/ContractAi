@@ -26,6 +26,7 @@ from app.models.clause import Clause
 from app.models.obligation import Obligation
 from app.models.risk_signal import RiskSignal
 from app.models.contract_fact import ContractFact
+from app.models.evidence import Evidence
 
 # Level 5: Depends on users + contracts
 from app.models.audit_event import AuditEvent
@@ -38,5 +39,6 @@ __all__ = [
     "Obligation",
     "RiskSignal",
     "ContractFact",
+    "Evidence",
     "AuditEvent",
 ]

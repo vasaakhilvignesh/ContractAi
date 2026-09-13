@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 6D: Structured Contract Fact Extraction** |
+| **Current Phase** | **Phase 7A: Persistent Evidence Model & Lineage Architecture** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 13 passed (`test_contract_fact_extraction.py`), 13 passed (`test_obligation_extraction.py`), 13 passed (`test_clause_extraction.py`), 25 passed (`test_structured_output.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `9125165` ("feat: add obligation extraction") |
+| **Last Verified State** | Backend: 16 passed (`test_evidence_model.py`), 26 passed (`test_contract_fact_extraction.py`, `test_obligation_extraction.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `dd6667d` ("feat: add contract fact extraction") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7: Frontend Integration** |
-| **Exact Next Action** | Implement deterministic risk rule evaluation over structured contract facts and clauses to generate RiskSignal records. |
+| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7B: Evidence & Citation Integration** |
+| **Exact Next Action** | Implement deterministic risk rule evaluation or evidence citation integration. |
 
 ---
 

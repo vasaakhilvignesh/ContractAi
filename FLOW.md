@@ -164,14 +164,15 @@ Relational Models (`backend/app/models/`):
    ├── Clause           (Extracted clause, verbatim text, page number, facts)
    ├── Obligation       (Responsible party, deadline, priority, obligation_type, deadline_info, lineage)
    ├── ContractFact     (Key, value, evidence snippet, page number, confidence, lineage)
+   ├── Evidence         (Source item reference, source text, char span offsets, page number, immutable, lineage)
    ├── RiskSignal       (Rule ID, severity, verbatim quote, lineage)
    └── AuditEvent       (Tamper-evident append-only activity log)
    │
    ▼ Migrations (`backend/alembic/`)
-Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema`, Phase 4C `18338ecd31a9_typed_vector_and_hnsw_index`, Phase 5B `fd983c1fd05f_add_search_vector_and_gin_index`, Phase 6C `c82e75f1b94a_add_obligation_type_and_deadline_info`, and Phase 6D `e41a982f63cb_add_contract_facts_table` applied to Neon PostgreSQL
+Alembic Migration Tooling: initial migration `df2c477aaabb_initial_schema`, Phase 4C `18338ecd31a9_typed_vector_and_hnsw_index`, Phase 5B `fd983c1fd05f_add_search_vector_and_gin_index`, Phase 6C `c82e75f1b94a_add_obligation_type_and_deadline_info`, Phase 6D `e41a982f63cb_add_contract_facts_table`, and Phase 7A `a71f49b1a03e_add_evidence_table` applied to Neon PostgreSQL
    │
    ▼ Primary Database (`Neon PostgreSQL` + `pgvector`)
-All 8 relational tables + Vector(768) column + HNSW index (vector_cosine_ops) + 15 foreign keys active
+All 9 relational tables + Vector(768) column + HNSW index (vector_cosine_ops) + 18 foreign keys active
 ```
 
 **Evidence Lineage Flow (Implemented in Schema & Live in Neon):**
@@ -185,6 +186,9 @@ Contract (id)
    │               ├──► Obligation (id, contract_id, source_clause_id, source_chunk_id)
    │               ├──► ContractFact (id, contract_id, source_clause_id, source_chunk_id, fact_key)
    │               └──► RiskSignal (id, contract_id, source_clause_id, source_chunk_id, rule_id)
+   │
+   ├──► Evidence (id, contract_id, source_clause_id, source_chunk_id, source_item_type, source_item_id, source_text, char_start, char_end)
+   │       └── Preserves: evidence → source item (clause/obligation/fact) → clause → chunk → page → contract
    │
    └──► AuditEvent (id, contract_id, user_id, event_type, created_at)
 ```

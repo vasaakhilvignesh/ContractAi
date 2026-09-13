@@ -279,9 +279,20 @@ Format for each record:
 - **Phase:** Phase 6D
 - **Date:** 2026-09-13
 
+### DEC-033: Evidence Data Model, Schema & Lineage Architecture
+- **Decision:** Implement a persistent, source-oriented, and immutable `Evidence` SQLAlchemy ORM model and corresponding Pydantic v2 schemas (`EvidenceBase`, `EvidenceCreate`, `EvidenceResponse`, `EvidenceLineage`, `EvidenceListResponse`). Apply Alembic migration `a71f49b1a03e` creating the `evidence` table with foreign keys `contract_id` (CASCADE), `source_clause_id` (SET NULL), and `source_chunk_id` (SET NULL), along with `source_item_type` (`'clause' | 'obligation' | 'contract_fact'`), `source_item_id`, `source_item_reference`, `page_number`, `source_text`, `char_start`, and `char_end`. Enforce strict 6-tier evidence lineage (`evidence → source item → clause → chunk → page → contract`). Implement database check constraints (`ck_evidence_page_number_positive`, `ck_evidence_char_start_non_negative`, `ck_evidence_char_end_gte_start`, `ck_evidence_source_item_type_valid`) and indexes (`ix_evidence_contract_id`, `ix_evidence_source_clause_id`, `ix_evidence_source_chunk_id`, `ix_evidence_source_item`, `ix_evidence_contract_page`, `ix_evidence_created_at`). Enforce immutability through omitting `updated_at` and attaching a SQLAlchemy `before_update` event listener preventing in-place mutations.
+- **Context:** Phase 7A requires establishing a dedicated evidence model to anchor all extracted contract entities (clauses, obligations, contract facts) directly to immutable textual and structural source spans within the contract document before citations, RAG, and UI highlight integration.
+- **Why this decision was made:** Centralizing evidence in a dedicated table allows polymorphic citation across multiple entity types without duplicating verbatim text or span coordinates across every domain model. Linking directly to parent contract, source clause, and document chunk preserves full lineage trace back to the PDF page and contract root. Enforcing immutability ensures historical evidence observations cannot be tampered with or altered after creation.
+- **Alternatives considered:** Embedding evidence text and spans solely within each individual domain entity table; storing JSON blobs of evidence; dynamic unpersisted lineage calculation.
+- **Why alternatives were rejected:** Embedding evidence within domain entities duplicates schema columns and makes cross-entity evidence querying inefficient. Unpersisted lineage lacks referential integrity and auditability. JSON blobs prevent database-level foreign keys and indexing.
+- **Consequences / Trade-offs:** Evidence records must be linked to a valid contract and source item; deleting a contract cascades to its evidence, while deleting a chunk or clause nullifies the respective foreign key to preserve historical auditability.
+- **Phase:** Phase 7A
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
+
 
 The following architectural decisions have **not yet been made** or are partially resolved:
 

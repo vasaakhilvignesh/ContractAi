@@ -157,6 +157,10 @@ class Clause(Base):
         "RiskSignal",
         back_populates="source_clause",
     )
+    evidence: Mapped[list["Evidence"]] = relationship(  # noqa: F821
+        "Evidence",
+        back_populates="source_clause",
+    )
 
     def __repr__(self) -> str:
         return (
