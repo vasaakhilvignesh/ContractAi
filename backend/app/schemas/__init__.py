@@ -88,6 +88,10 @@ from app.schemas.evidence import (
     EvidenceResponse,
     EvidenceLineage,
     EvidenceListResponse,
+    EvidenceLineageListResponse,
+    EvidenceValidationIssue,
+    SingleEvidenceValidationResult,
+    EvidenceValidationSummary,
 )
 
 __all__ = [
@@ -153,4 +157,8 @@ __all__ = [
     "EvidenceResponse",
     "EvidenceLineage",
     "EvidenceListResponse",
+    "EvidenceLineageListResponse",
+    "EvidenceValidationIssue",
+    "SingleEvidenceValidationResult",
+    "EvidenceValidationSummary",
 ]

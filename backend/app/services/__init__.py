@@ -138,6 +138,21 @@ from app.services.contract_fact_service import (
     list_contract_facts,
 )
 
+from app.services.evidence_service import (
+    EvidenceServiceError,
+    ContractNotFoundError as EvidenceContractNotFoundError,
+    EvidenceNotFoundError,
+    SourceItemNotFoundError,
+    EvidenceValidationError,
+    create_evidence,
+    get_evidence_by_id,
+    list_contract_evidence,
+    get_evidence_lineage,
+    list_evidence_lineage,
+    validate_single_evidence,
+    validate_contract_evidence,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -223,4 +238,16 @@ __all__ = [
     "extract_facts_from_clause",
     "extract_contract_facts",
     "list_contract_facts",
+    "EvidenceServiceError",
+    "EvidenceContractNotFoundError",
+    "EvidenceNotFoundError",
+    "SourceItemNotFoundError",
+    "EvidenceValidationError",
+    "create_evidence",
+    "get_evidence_by_id",
+    "list_contract_evidence",
+    "get_evidence_lineage",
+    "list_evidence_lineage",
+    "validate_single_evidence",
+    "validate_contract_evidence",
 ]

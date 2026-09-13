@@ -289,6 +289,16 @@ Format for each record:
 - **Phase:** Phase 7A
 - **Date:** 2026-09-13
 
+### DEC-034: Evidence API, Lineage Tracing & Deterministic Validation
+- **Decision:** Implement dedicated REST API endpoints under `/contracts/{contract_id}/evidence` (and `/api/v1` aliases) providing CRUD listing, source item filtering (`source_item_type`, `source_item_id`, `page_number`), and complete 6-tier lineage resolution (`/lineage`). Implement deterministic evidence validation (`POST /contracts/{contract_id}/evidence/validate`) verifying contract ownership, source item presence, structural clause/chunk integrity, page consistency, verbatim substring containment, and span alignment.
+- **Context:** Evidence records anchor extracted domain entities to source documents. Downstream citations and UI highlights require verifying that evidence has not become stale, orphaned, or corrupted.
+- **Why this decision was made:** Exposing dedicated evidence retrieval and lineage tracing endpoints ensures the frontend and citation views can query provenance without traversing disparate domain tables. Providing deterministic validation enables the platform to detect text mismatches, unlinked entities, or page divergence without expensive LLM round-trips.
+- **Alternatives considered:** Relying purely on database foreign keys without text or page checks; delegating validation to runtime LLM re-extraction; calculating lineage ad-hoc on the frontend.
+- **Why alternatives were rejected:** Foreign keys do not check verbatim text authenticity or span boundaries against underlying chunks. LLM-based validation is non-deterministic, slow, and expensive. Frontend lineage calculation duplicates data and exposes raw internal IDs.
+- **Consequences / Trade-offs:** Validation requires loading referenced chunk/clause records from the database to perform string and page checks.
+- **Phase:** Phase 7B & Phase 7C
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

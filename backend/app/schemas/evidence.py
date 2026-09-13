@@ -142,3 +142,64 @@ class EvidenceListResponse(BaseModel):
     contract_id: uuid.UUID
     total_evidence: int
     evidence: list[EvidenceResponse]
+
+
+class EvidenceLineageListResponse(BaseModel):
+    """Response payload for listing evidence with complete lineage traces."""
+    contract_id: uuid.UUID
+    total_evidence: int
+    evidence: list[EvidenceLineage]
+
+
+# ====================================================================
+# Phase 7C Validation Schemas
+# ====================================================================
+
+class EvidenceValidationIssue(BaseModel):
+    """Specific validation issue discovered for an evidence record."""
+    issue_type: str = Field(
+        description="Category of issue: missing_contract, missing_source_item, contract_mismatch, "
+                    "missing_chunk, missing_clause, page_mismatch, text_mismatch, span_mismatch, stale_evidence."
+    )
+    severity: str = Field(
+        description="Severity level: error | warning"
+    )
+    message: str = Field(
+        description="Human-readable description of the validation issue."
+    )
+    field: Optional[str] = Field(
+        default=None,
+        description="Affected field or relationship."
+    )
+
+
+class SingleEvidenceValidationResult(BaseModel):
+    """Validation result for an individual evidence record."""
+    evidence_id: uuid.UUID
+    is_valid: bool
+    status: str = Field(
+        description="Overall status: 'valid', 'stale', 'broken_lineage', 'text_mismatch'"
+    )
+    issues: list[EvidenceValidationIssue] = Field(
+        default_factory=list,
+        description="List of detected validation issues, if any."
+    )
+    lineage_intact: bool = Field(
+        description="True if contract, source item, clause, and chunk references are referentially intact."
+    )
+    text_verified: bool = Field(
+        description="True if source_text matches or cleanly substrings within its referenced chunk."
+    )
+    page_verified: bool = Field(
+        description="True if page_number matches the parent chunk or clause page number."
+    )
+
+
+class EvidenceValidationSummary(BaseModel):
+    """Comprehensive validation summary for all evidence in a contract."""
+    contract_id: uuid.UUID
+    total_checked: int
+    valid_count: int
+    invalid_count: int
+    stale_count: int
+    results: list[SingleEvidenceValidationResult]

@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 7A: Persistent Evidence Model & Lineage Architecture** |
+| **Current Phase** | **Phase 7C: Evidence Validation & Integrity Verification** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 16 passed (`test_evidence_model.py`), 26 passed (`test_contract_fact_extraction.py`, `test_obligation_extraction.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `dd6667d` ("feat: add contract fact extraction") |
+| **Last Verified State** | Backend: 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `dfd8f44` ("feat: add evidence model") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7B: Evidence & Citation Integration** |
-| **Exact Next Action** | Implement deterministic risk rule evaluation or evidence citation integration. |
+| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7D: Citation Highlighting & UI Wiring** |
+| **Exact Next Action** | Implement deterministic risk rule evaluation or evidence citation frontend highlighting. |
 
 ---
 
@@ -206,11 +206,28 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [ ] **Phase 6E: Deterministic Risk Rules & Risk Signals**
     - [ ] Implementation of deterministic business risk rules (notice period thresholds, uncapped liability, auto-renewal deadlines).
     - [ ] Generation and database persistence of `RiskSignal` records.
-- [ ] **Phase 7: Frontend Integration & Live API Wiring**
-  - [ ] Replacement of static mock data with API client services.
-  - [ ] Upload wizard connection to backend ingestion pipeline.
-  - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
-  - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
+- [ ] **Phase 7: Evidence Architecture, API & Frontend Integration**
+  - [x] **Phase 7A: Persistent Evidence Model & Lineage Architecture** *(Completed)*
+    - [x] Implemented source-oriented immutable `Evidence` model (`backend/app/models/evidence.py`).
+    - [x] Applied Alembic migration `a71f49b1a03e_add_evidence_table` with check constraints and indexes.
+    - [x] Enforced 6-tier evidence lineage: `evidence → source item → clause → chunk → page → contract`.
+    - [x] Enforced immutability via `before_update` listener.
+    - [x] 16 tests in `backend/tests/test_evidence_model.py` passing.
+  - [x] **Phase 7B: Evidence API & Lineage Retrieval** *(Completed)*
+    - [x] Service layer in `backend/app/services/evidence_service.py` (`create_evidence`, `get_evidence_by_id`, `list_contract_evidence`, `get_evidence_lineage`, `list_evidence_lineage`).
+    - [x] REST endpoints: `POST /contracts/{contract_id}/evidence`, `GET /contracts/{contract_id}/evidence`, `GET /contracts/{contract_id}/evidence/{evidence_id}`, `GET /contracts/{contract_id}/evidence/lineage`, `GET /contracts/{contract_id}/evidence/{evidence_id}/lineage` (with `/api/v1` aliases).
+    - [x] Filtering support: `source_item_type`, `source_item_id`, and `page_number`.
+  - [x] **Phase 7C: Deterministic Evidence Validation Service** *(Completed)*
+    - [x] Deterministic validation in `backend/app/services/evidence_service.py` (`validate_single_evidence`, `validate_contract_evidence`).
+    - [x] Verifies contract ownership, source item presence, structural clause/chunk integrity, page consistency, verbatim text matching, and character span bounds.
+    - [x] Detects invalid, missing, broken lineage, or stale evidence.
+    - [x] REST endpoint: `POST /contracts/{contract_id}/evidence/validate` (with `/api/v1` alias).
+    - [x] 8 comprehensive unit/integration tests in `backend/tests/test_evidence_api_and_validation.py` (100% pass rate).
+  - [ ] **Phase 7D: Frontend Integration & Live API Wiring**
+    - [ ] Replacement of static mock data with API client services.
+    - [ ] Upload wizard connection to backend ingestion pipeline.
+    - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
+    - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
 - [ ] **Phase 8: Authentication, Evaluation, Testing & Production Hardening**
   - [ ] User authentication and organization-level multi-tenancy.
   - [ ] Retrieval evaluation suite (precision, recall, hallucination rate).

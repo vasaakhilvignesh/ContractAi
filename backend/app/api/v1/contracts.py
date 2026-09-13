@@ -59,6 +59,14 @@ from app.schemas.contract_fact import (
     ContractFactExtractionResponse,
     ContractFactListResponse,
 )
+from app.schemas.evidence import (
+    EvidenceCreate,
+    EvidenceResponse,
+    EvidenceListResponse,
+    EvidenceLineage,
+    EvidenceLineageListResponse,
+    EvidenceValidationSummary,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -71,6 +79,7 @@ from app.services import (
     clause_extraction_service,
     obligation_extraction_service,
     contract_fact_service,
+    evidence_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -1139,4 +1148,251 @@ def get_facts(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while listing contract facts: {exc}",
+        )
+
+
+# ====================================================================
+# Phase 7B: Evidence Endpoints
+# ====================================================================
+
+@router.post(
+    "/{contract_id}/evidence",
+    response_model=EvidenceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create persistent evidence record for a contract",
+    description=(
+        "Persists a source-oriented evidence record anchoring an extracted domain entity "
+        "(clause, obligation, fact) to contract text, page number, and chunk."
+    ),
+)
+def create_evidence_record(
+    contract_id: uuid.UUID,
+    payload: EvidenceCreate,
+    db: Session = Depends(get_db),
+) -> EvidenceResponse:
+    """Create a persistent evidence record."""
+    try:
+        return evidence_service.create_evidence(
+            db=db,
+            contract_id=contract_id,
+            payload=payload,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except evidence_service.EvidenceValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while creating evidence: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/evidence",
+    response_model=EvidenceListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List evidence records for a contract",
+    description="Lists evidence records for a contract with optional filtering by source_item_type, source_item_id, and page_number.",
+)
+def list_contract_evidence(
+    contract_id: uuid.UUID,
+    source_item_type: Optional[str] = Query(
+        default=None,
+        description="Filter by source item type ('clause' | 'obligation' | 'contract_fact')",
+    ),
+    source_item_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Filter by UUID of specific source item",
+    ),
+    page_number: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Filter by source page number (1-indexed)",
+    ),
+    db: Session = Depends(get_db),
+) -> EvidenceListResponse:
+    """List evidence records for a contract."""
+    try:
+        return evidence_service.list_contract_evidence(
+            db=db,
+            contract_id=contract_id,
+            source_item_type=source_item_type,
+            source_item_id=source_item_id,
+            page_number=page_number,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while listing evidence: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/evidence/lineage",
+    response_model=EvidenceLineageListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List evidence with complete 6-tier lineage traces",
+    description="Returns all evidence records with resolved 6-tier provenance: evidence → source item → clause → chunk → page → contract.",
+)
+def list_contract_evidence_lineage(
+    contract_id: uuid.UUID,
+    source_item_type: Optional[str] = Query(
+        default=None,
+        description="Filter by source item type ('clause' | 'obligation' | 'contract_fact')",
+    ),
+    source_item_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Filter by UUID of specific source item",
+    ),
+    page_number: Optional[int] = Query(
+        default=None,
+        ge=1,
+        description="Filter by source page number (1-indexed)",
+    ),
+    db: Session = Depends(get_db),
+) -> EvidenceLineageListResponse:
+    """List complete evidence lineages for a contract."""
+    try:
+        return evidence_service.list_evidence_lineage(
+            db=db,
+            contract_id=contract_id,
+            source_item_type=source_item_type,
+            source_item_id=source_item_id,
+            page_number=page_number,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while retrieving evidence lineage: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/evidence/{evidence_id}",
+    response_model=EvidenceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get single evidence record by ID",
+    description="Retrieves a specific evidence record belonging to the contract.",
+)
+def get_evidence(
+    contract_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> EvidenceResponse:
+    """Get single evidence record."""
+    try:
+        return evidence_service.get_evidence_by_id(
+            db=db,
+            contract_id=contract_id,
+            evidence_id=evidence_id,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except evidence_service.EvidenceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence with id '{evidence_id}' not found for contract '{contract_id}'",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while getting evidence: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/evidence/{evidence_id}/lineage",
+    response_model=EvidenceLineage,
+    status_code=status.HTTP_200_OK,
+    summary="Get complete lineage trace for an evidence record",
+    description="Retrieves the full 6-tier provenance: evidence → source item → clause → chunk → page → contract.",
+)
+def get_evidence_lineage(
+    contract_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> EvidenceLineage:
+    """Get lineage trace for an evidence record."""
+    try:
+        return evidence_service.get_evidence_lineage(
+            db=db,
+            contract_id=contract_id,
+            evidence_id=evidence_id,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except evidence_service.EvidenceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence with id '{evidence_id}' not found for contract '{contract_id}'",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while getting evidence lineage: {exc}",
+        )
+
+
+# ====================================================================
+# Phase 7C: Deterministic Evidence Validation Endpoints
+# ====================================================================
+
+@router.post(
+    "/{contract_id}/evidence/validate",
+    response_model=EvidenceValidationSummary,
+    status_code=status.HTTP_200_OK,
+    summary="Validate contract evidence integrity and lineage",
+    description=(
+        "Deterministically validates all evidence records for a contract against source chunks, "
+        "clauses, page numbers, text excerpts, and ownership relationships. Detects broken, "
+        "missing, or stale evidence."
+    ),
+)
+def validate_contract_evidence(
+    contract_id: uuid.UUID,
+    evidence_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Optionally validate only a specific evidence record",
+    ),
+    db: Session = Depends(get_db),
+) -> EvidenceValidationSummary:
+    """Validate contract evidence integrity."""
+    try:
+        return evidence_service.validate_contract_evidence(
+            db=db,
+            contract_id=contract_id,
+            evidence_id=evidence_id,
+        )
+    except evidence_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while validating evidence: {exc}",
         )
