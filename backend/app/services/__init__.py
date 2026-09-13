@@ -153,6 +153,22 @@ from app.services.evidence_service import (
     validate_contract_evidence,
 )
 
+from app.services.risk_engine import (
+    BaseRiskRule,
+    ContractEvaluationContext,
+    RiskRuleOutput,
+    STANDARD_RISK_RULES,
+    evaluate_contract_rules,
+)
+
+from app.services.risk_service import (
+    RiskServiceError,
+    ContractNotFoundError as RiskContractNotFoundError,
+    RiskEvaluationError,
+    evaluate_and_persist_contract_risks,
+    list_contract_risk_signals,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -250,4 +266,14 @@ __all__ = [
     "list_evidence_lineage",
     "validate_single_evidence",
     "validate_contract_evidence",
+    "BaseRiskRule",
+    "ContractEvaluationContext",
+    "RiskRuleOutput",
+    "STANDARD_RISK_RULES",
+    "evaluate_contract_rules",
+    "RiskServiceError",
+    "RiskContractNotFoundError",
+    "RiskEvaluationError",
+    "evaluate_and_persist_contract_risks",
+    "list_contract_risk_signals",
 ]

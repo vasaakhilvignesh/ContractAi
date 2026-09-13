@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 7C: Evidence Validation & Integrity Verification** |
+| **Current Phase** | **Phase 8A–8D: Deterministic Contract Risk Engine & API** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `dfd8f44` ("feat: add evidence model") |
+| **Last Verified State** | Backend: 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `6d3720f` ("feat: add evidence api and validation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 6E: Deterministic Risk Rules & Signals / Phase 7D: Citation Highlighting & UI Wiring** |
-| **Exact Next Action** | Implement deterministic risk rule evaluation or evidence citation frontend highlighting. |
+| **Next Phase** | **Phase 9: Frontend Integration & Interactive Citation Highlighting** |
+| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, and risk endpoints. |
 
 ---
 
@@ -228,11 +228,36 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [ ] Upload wizard connection to backend ingestion pipeline.
     - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
     - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 8: Authentication, Evaluation, Testing & Production Hardening**
-  - [ ] User authentication and organization-level multi-tenancy.
-  - [ ] Retrieval evaluation suite (precision, recall, hallucination rate).
-  - [ ] Automated end-to-end and integration tests.
-  - [ ] Production build containerization and deployment configuration.
+- [x] **Phase 8: Contract Risk Engine & Risk API (Phase 8A–8D)** *(Completed)*
+  - [x] **Phase 8A: Deterministic Risk Rule Framework** *(Completed)*
+    - [x] Modular architecture (`BaseRiskRule`, `ContractEvaluationContext`, `RiskRuleOutput`, `evaluate_contract_rules`).
+    - [x] Context ingestion over structured contract facts, clauses, obligations, and chunks.
+    - [x] Absolute prohibition on LLM severity/trigger decision-making.
+    - [x] Zero false positives: rules never fire or hallucinate when contractual facts are missing.
+  - [x] **Phase 8B: Renewal Rules** *(Completed)*
+    - [x] `RULE_CONTRACT_EXPIRED`: flags passed expiration dates as critical.
+    - [x] `RULE_CONTRACT_EXPIRING_SOON`: flags contracts expiring within 60 days (high <= 30d, medium <= 60d).
+    - [x] `RULE_AUTO_RENEWAL_ACTIVE`: flags agreements renewing automatically without active cancellation.
+    - [x] `RULE_AUTO_RENEWAL_SHORT_NOTICE`: flags notice windows <= 30 days in auto-renewing agreements.
+  - [x] **Phase 8C: Contract Risk Rules** *(Completed)*
+    - [x] `RULE_TERMINATION_NOTICE_SHORT`: flags termination notice periods <= 15 days.
+    - [x] `RULE_UNCAPPED_LIABILITY`: flags uncapped aggregate liability or broad liability carveouts.
+    - [x] `RULE_BROAD_INDEMNIFICATION`: flags uncapped or broad indemnification obligations.
+    - [x] `RULE_MISSING_GOVERNING_LAW`: flags agreements lacking governing law or jurisdiction.
+    - [x] `RULE_HIGH_PRIORITY_OVERDUE_OBLIGATION`: flags unfulfilled high-priority obligations past due.
+    - [x] Strict 6-tier evidence lineage: `risk → rule → structured fact/clause/obligation → evidence → chunk → page → contract`.
+  - [x] **Phase 8D: Risk API & Idempotent Persistence** *(Completed)*
+    - [x] Service layer in `backend/app/services/risk_service.py` (`evaluate_and_persist_contract_risks`, `list_contract_risk_signals`).
+    - [x] Idempotent evaluation: returns existing signals without duplication unless `force_reevaluate=True`.
+    - [x] REST endpoints: `POST /contracts/{contract_id}/risks/evaluate` and `GET /contracts/{contract_id}/risks` (with `/api/v1` aliases).
+    - [x] Filtering support: `severity` (`critical`, `high`, `medium`, `low`) and `category` (`renewal`, `termination`, `liability`, etc.).
+    - [x] 8 comprehensive unit and integration tests in `backend/tests/test_risk_engine.py` (100% pass rate).
+- [ ] **Phase 9: Frontend Integration & Interactive Citation Highlighting**
+  - [ ] Replacement of static mock data with API client services.
+  - [ ] Upload wizard connection to backend ingestion pipeline.
+  - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
+  - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
+- [ ] **Phase 10: Authentication, Evaluation, Testing & Production Hardening**
 
 ---
 

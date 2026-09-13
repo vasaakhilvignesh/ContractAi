@@ -299,6 +299,16 @@ Format for each record:
 - **Phase:** Phase 7B & Phase 7C
 - **Date:** 2026-09-13
 
+### DEC-035: Deterministic Contract Risk Engine & Idempotent Evaluation
+- **Decision:** Implement a modular, deterministic risk rule architecture (`BaseRiskRule`, `ContractEvaluationContext`, `evaluate_contract_rules`) evaluating structured contract facts, clauses, and obligations. Strictly prohibit the LLM from determining risk severity or triggering rules nondeterministically. Implement renewal rules (`RULE_CONTRACT_EXPIRED`, `RULE_CONTRACT_EXPIRING_SOON`, `RULE_AUTO_RENEWAL_ACTIVE`, `RULE_AUTO_RENEWAL_SHORT_NOTICE`) and contract risk rules (`RULE_TERMINATION_NOTICE_SHORT`, `RULE_UNCAPPED_LIABILITY`, `RULE_BROAD_INDEMNIFICATION`, `RULE_MISSING_GOVERNING_LAW`, `RULE_HIGH_PRIORITY_OVERDUE_OBLIGATION`). Preserve strict 6-tier evidence lineage: `risk → rule → structured fact/clause/obligation → evidence → chunk → page → contract`. Provide idempotent evaluation via `POST /contracts/{contract_id}/risks/evaluate` (returns existing signals unless `force_reevaluate=True`) and listing via `GET /contracts/{contract_id}/risks`.
+- **Context:** Core ContractIQ design rule 12 mandates: *RAG finds evidence. Structured extraction turns evidence into data. Deterministic rules turn structured data into actionable risk intelligence.*
+- **Why this decision was made:** Legal and procurement risk evaluation must be explainable, consistent, auditable, and defendable. LLMs are non-deterministic and can generate variable severity ratings across identical inputs; deterministic rules operating over structured facts provide 100% reproducible risk flags with exact rule citations and action recommendations.
+- **Alternatives considered:** Asking LLM prompts to output risk ratings and scores directly; computing risks dynamically on the frontend without persistence; hardcoded heuristic filters without an extensible rule framework.
+- **Why alternatives were rejected:** LLM risk scoring produces hallucinations and non-reproducible outputs. Frontend calculation prevents central reporting and database audit trails. Hardcoded scripts lack extensibility.
+- **Consequences / Trade-offs:** Risk rules only detect risks for which structured facts, clauses, or obligations were successfully extracted.
+- **Phase:** Phase 8A–8D
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

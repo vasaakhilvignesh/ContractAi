@@ -67,6 +67,11 @@ from app.schemas.evidence import (
     EvidenceLineageListResponse,
     EvidenceValidationSummary,
 )
+from app.schemas.risk import (
+    RiskEvaluationRequest,
+    RiskEvaluationResponse,
+    RiskSignalListResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -80,6 +85,7 @@ from app.services import (
     obligation_extraction_service,
     contract_fact_service,
     evidence_service,
+    risk_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
@@ -1395,4 +1401,87 @@ def validate_contract_evidence(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while validating evidence: {exc}",
+        )
+
+
+# ====================================================================
+# Phase 8D: Deterministic Risk Engine Endpoints
+# ====================================================================
+
+@router.post(
+    "/{contract_id}/risks/evaluate",
+    response_model=RiskEvaluationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Evaluate deterministic risk rules on a contract",
+    description=(
+        "Evaluates registered deterministic risk rules on the contract's structured facts, "
+        "clauses, and obligations. Idempotent by default: returns existing signals unless "
+        "force_reevaluate is True."
+    ),
+)
+def evaluate_contract_risks(
+    contract_id: uuid.UUID,
+    payload: RiskEvaluationRequest = RiskEvaluationRequest(),
+    db: Session = Depends(get_db),
+) -> RiskEvaluationResponse:
+    """Evaluate contract risk rules deterministically."""
+    try:
+        return risk_service.evaluate_and_persist_contract_risks(
+            db=db,
+            contract_id=contract_id,
+            force_reevaluate=payload.force_reevaluate,
+        )
+    except risk_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except risk_service.RiskEvaluationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during risk evaluation: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/risks",
+    response_model=RiskSignalListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List risk signals for a contract",
+    description="Retrieves persisted risk signals for a contract with optional filtering by severity and category.",
+)
+def list_contract_risks(
+    contract_id: uuid.UUID,
+    severity: Optional[str] = Query(
+        default=None,
+        description="Filter by risk severity: critical | high | medium | low",
+    ),
+    category: Optional[str] = Query(
+        default=None,
+        description="Filter by risk category: renewal | termination | liability | indemnification | payment | compliance | critical_terms | other",
+    ),
+    db: Session = Depends(get_db),
+) -> RiskSignalListResponse:
+    """List persisted risk signals for a contract."""
+    try:
+        return risk_service.list_contract_risk_signals(
+            db=db,
+            contract_id=contract_id,
+            severity=severity,
+            category=category,
+        )
+    except risk_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while listing risk signals: {exc}",
         )

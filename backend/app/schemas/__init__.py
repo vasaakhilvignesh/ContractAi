@@ -94,6 +94,16 @@ from app.schemas.evidence import (
     EvidenceValidationSummary,
 )
 
+from app.schemas.risk import (
+    RiskSeverity,
+    RiskCategory,
+    RiskSignalBase,
+    RiskSignalResponse,
+    RiskEvaluationRequest,
+    RiskEvaluationResponse,
+    RiskSignalListResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -161,4 +171,11 @@ __all__ = [
     "EvidenceValidationIssue",
     "SingleEvidenceValidationResult",
     "EvidenceValidationSummary",
+    "RiskSeverity",
+    "RiskCategory",
+    "RiskSignalBase",
+    "RiskSignalResponse",
+    "RiskEvaluationRequest",
+    "RiskEvaluationResponse",
+    "RiskSignalListResponse",
 ]
