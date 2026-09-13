@@ -48,6 +48,17 @@ from app.schemas.query import (
     ContractHybridQueryResponse,
 )
 
+from app.schemas.clause import (
+    ClauseType,
+    ExtractedClauseLLM,
+    ChunkClauseExtractionResult,
+    ClauseBase,
+    ClauseResponse,
+    ContractClauseExtractionRequest,
+    ContractClauseExtractionResponse,
+    ContractClauseListResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -81,4 +92,12 @@ __all__ = [
     "ContractHybridQueryRequest",
     "HybridChunkMatch",
     "ContractHybridQueryResponse",
+    "ClauseType",
+    "ExtractedClauseLLM",
+    "ChunkClauseExtractionResult",
+    "ClauseBase",
+    "ClauseResponse",
+    "ContractClauseExtractionRequest",
+    "ContractClauseExtractionResponse",
+    "ContractClauseListResponse",
 ]

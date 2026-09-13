@@ -108,6 +108,16 @@ from app.services.structured_output_factory import (
     get_structured_llm_provider,
 )
 
+from app.services.clause_extraction_service import (
+    ClauseExtractionError,
+    ContractNotFoundError as ClauseContractNotFoundError,
+    NoChunksFoundError as ClauseNoChunksFoundError,
+    ExtractionProviderError,
+    extract_clauses_from_chunk,
+    extract_contract_clauses,
+    list_contract_clauses,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -172,4 +182,11 @@ __all__ = [
     "StructuredLLMProvider",
     "GeminiStructuredOutputProvider",
     "get_structured_llm_provider",
+    "ClauseExtractionError",
+    "ClauseContractNotFoundError",
+    "ClauseNoChunksFoundError",
+    "ExtractionProviderError",
+    "extract_clauses_from_chunk",
+    "extract_contract_clauses",
+    "list_contract_clauses",
 ]

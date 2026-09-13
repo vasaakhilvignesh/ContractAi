@@ -129,7 +129,10 @@ FastAPI Application (`backend/app/main.py`)
    │         ├── GET    /contracts/{contract_id}/chunks            (list paginated document chunks for contract)
    │         ├── POST   /contracts/{contract_id}/embed             (generate & persist 768-dim vector embeddings for chunks)
    │         ├── POST   /contracts/{contract_id}/query             (semantic vector retrieval using pgvector cosine distance)
-   │         └── POST   /contracts/{contract_id}/keyword-query     (keyword full-text retrieval using PostgreSQL tsvector / ts_rank_cd)
+   │         ├── POST   /contracts/{contract_id}/keyword-query     (keyword full-text retrieval using PostgreSQL tsvector / ts_rank_cd)
+   │         ├── POST   /contracts/{contract_id}/hybrid-query      (hybrid retrieval combining semantic and keyword search via RRF)
+   │         ├── POST   /contracts/{contract_id}/extract-clauses   (extract and persist structured clauses preserving lineage)
+   │         └── GET    /contracts/{contract_id}/clauses           (list extracted clauses with optional type filtering)
    │
    ├── Embedding & Retrieval Layer (`backend/app/services/`):
    │    ├── EmbeddingProvider (ABC with embed_texts & embed_query; RETRIEVAL_DOCUMENT & RETRIEVAL_QUERY task types)
@@ -140,11 +143,12 @@ FastAPI Application (`backend/app/main.py`)
    │    ├── keyword_retrieval_service (Contract-scoped PostgreSQL Full-Text Search, websearch_to_tsquery, ts_rank_cd)
    │    └── hybrid_retrieval_service (Reciprocal Rank Fusion - RRF combining semantic & keyword search)
    │
-   ├── Structured Output & LLM Layer (Phase 6A — `backend/app/services/`):
+   ├── Structured Output & Extraction Layer (Phase 6A & 6B — `backend/app/services/`):
    │    ├── StructuredLLMProvider (ABC for vendor-independent structured output generation)
    │    ├── GeminiStructuredOutputProvider (Google Gemini gemini-2.5-flash via google-genai SDK, response_schema mode)
    │    ├── validate_structured_output (Strict Pydantic v2 validation, fence stripping, structured error formatting)
-   │    └── get_structured_llm_provider (Factory function for provider resolution and dependency injection)
+   │    ├── get_structured_llm_provider (Factory function for provider resolution and dependency injection)
+   │    └── clause_extraction_service (Deterministic chunk processing, lineage preservation, idempotent persistence)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):

@@ -252,6 +252,16 @@ Format for each record:
 - **Phase:** Phase 6A
 - **Date:** 2026-09-13
 
+### DEC-030: Clause Extraction Architecture & Deterministic Processing
+- **Decision:** Extract contractual clauses from `DocumentChunk` records deterministically ordered by `chunk_index.asc()` using `StructuredLLMProvider` (`gemini-2.5-flash` with `ChunkClauseExtractionResult` Pydantic schema). Persist extracted clauses directly into the existing `clauses` database table preserving strict evidence lineage (`clause → chunk → page → contract`). Implement idempotent execution where rerun returns existing clauses without making redundant LLM calls unless `force_reextract=True`.
+- **Context:** Phase 6B requires extracting structured legal clauses (clause type, verbatim text, section/label, page number) from document chunks ahead of downstream obligation extraction and risk analysis.
+- **Why this decision was made:** Bounding clause extraction to chunk boundaries preserves 1-indexed source page provenance and chunk references. Ordering by `chunk_index.asc()` ensures deterministic document traversal. Using the Phase 6A validation layer protects the extraction pipeline against malformed JSON or schema violations. Reusing the initial database `clauses` table avoids premature migrations (Rule 1, Rule 2, Rule 10). Atomic transaction commit per contract guarantees all-or-nothing persistence with automatic rollback on error.
+- **Alternatives considered:** Full-document whole-text extraction in a single prompt; regex-only clause extraction; creating new clause tables.
+- **Why alternatives were rejected:** Whole-document extraction exceeds prompt context reliability on large enterprise contracts and loses granular page/chunk lineage. Regex-only extraction fails on diverse legal phrasing and boilerplate variants. Modifying or adding new clause tables is unnecessary when the existing `clauses` table schema already supports all required fields.
+- **Consequences / Trade-offs:** Chunks are processed sequentially; very large contracts (e.g. 100+ chunks) take time proportional to chunk count. Future optimization could batch chunks concurrently within safe rate limits.
+- **Phase:** Phase 6B
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
@@ -269,8 +279,8 @@ The following architectural decisions have **not yet been made** or are partiall
 - **Considerations:** Latency budget vs marginal MRR/NDCG gain.
 
 ### DEC-013: Structured Output Schema & Extraction Technique
-- **Status:** **Resolved in Phase 6A (DEC-029):** Pydantic v2 schemas validated with `validate_structured_output` and Gemini JSON schema enforcement.
-- **Remaining Open Question:** Domain-specific field schemas for contract clauses, obligations, and fact extraction (to be implemented in downstream extraction phases).
+- **Status:** **Resolved in Phase 6A (DEC-029) & Phase 6B (DEC-030):** Pydantic v2 schemas (`ExtractedClauseLLM`, `ChunkClauseExtractionResult`) validated with Phase 6A infrastructure and Gemini JSON schema enforcement.
+- **Remaining Open Question:** Field schemas for obligations and contract facts (to be implemented in downstream extraction phases).
 
 ### DEC-014: Deterministic Risk Rule Architecture
 - **Status:** **Not decided yet.**

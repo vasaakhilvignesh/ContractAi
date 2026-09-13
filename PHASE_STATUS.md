@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 6A: Structured Output Infrastructure** |
+| **Current Phase** | **Phase 6B: Structured Clause Extraction** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 25 passed (`test_structured_output.py`), 23 passed (`test_embedding_provider.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `c6c7ea9` ("feat: add retrieval evaluation") |
+| **Last Verified State** | Backend: 13 passed (`test_clause_extraction.py`), 25 passed (`test_structured_output.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `9e541e1` ("feat: add structured output infrastructure") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 6B: Structured Extraction Schemas / Downstream Extraction** |
-| **Exact Next Action** | Implement contract clause, obligation, and fact extraction schemas utilizing the structured output infrastructure. |
+| **Next Phase** | **Phase 6C: Structured Obligation & Fact Extraction / Deterministic Risk Rules** |
+| **Exact Next Action** | Implement structured obligation and contract fact extraction using the extraction framework. |
 
 ---
 
@@ -177,11 +177,19 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Extended `Settings` with `llm_provider`, `llm_model="gemini-2.5-flash"`, `llm_temperature=0.0`, and updated `.env.example`.
     - [x] Exported all structured output classes, functions, and exceptions from `backend/app/services/__init__.py`.
     - [x] 25 comprehensive unit and integration tests in `backend/tests/test_structured_output.py` (100% mocked, 0 real API calls, 100% pass rate).
-  - [ ] **Phase 6B: Structured Clause & Fact Extraction**
-    - [ ] Structured extraction schemas for clauses (Renewal, Termination, Liability, Indemnification).
-    - [ ] Structured obligation extraction (responsible party, due date, frequency, source clause).
-    - [ ] Linking of extracted entities to source contract chunks.
-  - [ ] **Phase 6C: Deterministic Risk Rules Engine**
+  - [x] **Phase 6B: Structured Clause Extraction** *(Completed)*
+    - [x] Defined Pydantic v2 schemas (`ClauseType`, `ExtractedClauseLLM`, `ChunkClauseExtractionResult`, `ClauseResponse`, `ContractClauseExtractionResponse`, `ContractClauseListResponse`).
+    - [x] Implemented standalone `clause_extraction_service.py` using `StructuredLLMProvider` and Phase 6A validation.
+    - [x] Processed contract document chunks deterministically in sequential order (`chunk_index.asc()`).
+    - [x] Preserved strict source evidence traceability: clause → chunk → page → contract.
+    - [x] Idempotent persistence into `clauses` database table (skips existing unless `force_reextract=True`).
+    - [x] Added REST API endpoints `POST /contracts/{contract_id}/extract-clauses` and `GET /contracts/{contract_id}/clauses` (with versioned `/api/v1` aliases).
+    - [x] 13 comprehensive unit and integration tests in `backend/tests/test_clause_extraction.py` (100% pass rate).
+  - [ ] **Phase 6C: Structured Obligation & Fact Extraction**
+    - [ ] Structured obligation extraction schemas (responsible party, due date, frequency, source clause).
+    - [ ] Structured contract fact extraction (notice period, liability cap, governing law).
+    - [ ] Linking of extracted entities to source clauses and chunks.
+  - [ ] **Phase 6D: Deterministic Risk Rules Engine**
     - [ ] Implementation of deterministic business risk rules (notice period thresholds, uncapped liability, auto-renewal deadlines).
     - [ ] Generation and database persistence of `RiskSignal` records.
 - [ ] **Phase 7: Frontend Integration & Live API Wiring**
@@ -284,3 +292,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-13 | Python Bytecode Compilation (Phase 6A) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-13 | Frontend Build (Phase 6A Check) | `npm run build` | **PASSED** (built in 463ms, 0 errors) |
 | 2026-09-13 | TypeScript Verification (Phase 6A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-13 | Phase 6B Clause Extraction Tests | `pytest tests/test_clause_extraction.py -v` | **PASSED** (13 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-13 | Phase 6A Regression Verification | `pytest tests/test_structured_output.py -v` | **PASSED** (25 passed, 0 skipped, 100% mocked) |
+| 2026-09-13 | Python Bytecode Compilation (Phase 6B) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-13 | Frontend Build (Phase 6B Check) | `npm run build` | **PASSED** (built in 637ms, 0 errors) |
+| 2026-09-13 | TypeScript Verification (Phase 6B Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |

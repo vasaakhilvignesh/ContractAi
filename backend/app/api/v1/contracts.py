@@ -44,6 +44,11 @@ from app.schemas.query import (
     ContractHybridQueryRequest,
     ContractHybridQueryResponse,
 )
+from app.schemas.clause import (
+    ContractClauseExtractionRequest,
+    ContractClauseExtractionResponse,
+    ContractClauseListResponse,
+)
 from app.services import (
     contract_service,
     storage_service,
@@ -53,10 +58,15 @@ from app.services import (
     retrieval_service,
     keyword_retrieval_service,
     hybrid_retrieval_service,
+    clause_extraction_service,
 )
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
     EmbeddingProviderError,
+)
+from app.services.structured_output_validator import (
+    StructuredOutputError,
+    StructuredOutputConfigurationError,
 )
 
 
@@ -849,4 +859,89 @@ async def query_contract_hybrid(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during hybrid retrieval: {exc}",
+        )
+
+
+@router.post(
+    "/{contract_id}/extract-clauses",
+    response_model=ContractClauseExtractionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract structured clauses from contract chunks",
+    description=(
+        "Extracts structured legal clauses (clause type, verbatim text, section/label, page number) "
+        "from contract document chunks using the StructuredLLMProvider. Preserves strict source "
+        "traceability (clause -> chunk -> page -> contract). Operation is idempotent unless force_reextract=True."
+    ),
+)
+async def extract_clauses(
+    contract_id: uuid.UUID,
+    payload: Optional[ContractClauseExtractionRequest] = None,
+    db: Session = Depends(get_db),
+) -> ContractClauseExtractionResponse:
+    """Extract and persist structured clauses for a contract."""
+    force = payload.force_reextract if payload else False
+    try:
+        return await clause_extraction_service.extract_contract_clauses(
+            db=db,
+            contract_id=contract_id,
+            force_reextract=force,
+        )
+    except clause_extraction_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except clause_extraction_service.NoChunksFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except StructuredOutputConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Structured output provider is not configured: {exc}",
+        )
+    except clause_extraction_service.ClauseExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Clause extraction failed: {exc}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during clause extraction: {exc}",
+        )
+
+
+@router.get(
+    "/{contract_id}/clauses",
+    response_model=ContractClauseListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List extracted clauses for a contract",
+    description="Retrieves all extracted clauses for a contract, with optional filtering by clause_type.",
+)
+def get_clauses(
+    contract_id: uuid.UUID,
+    clause_type: Optional[str] = Query(
+        default=None,
+        description="Filter by legal clause type (e.g. termination, liability, auto_renewal)",
+    ),
+    db: Session = Depends(get_db),
+) -> ContractClauseListResponse:
+    """List persisted clauses for a contract."""
+    try:
+        return clause_extraction_service.list_contract_clauses(
+            db=db,
+            contract_id=contract_id,
+            clause_type=clause_type,
+        )
+    except clause_extraction_service.ContractNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while listing clauses: {exc}",
         )
