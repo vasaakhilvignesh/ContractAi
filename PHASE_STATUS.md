@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 5D: Retrieval Evaluation & Benchmarking** |
+| **Current Phase** | **Phase 6A: Structured Output Infrastructure** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 10 passed (`test_retrieval_evaluation.py`), 22 passed (`test_hybrid_retrieval.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `5ebc21f` ("feat: add hybrid retrieval with rrf") |
+| **Last Verified State** | Backend: 25 passed (`test_structured_output.py`), 23 passed (`test_embedding_provider.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `c6c7ea9` ("feat: add retrieval evaluation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 4: Structured Extraction & Deterministic Risk Rules Engine** |
-| **Exact Next Action** | Implement structured extraction schemas and deterministic risk evaluation rules for contracts. |
+| **Next Phase** | **Phase 6B: Structured Extraction Schemas / Downstream Extraction** |
+| **Exact Next Action** | Implement contract clause, obligation, and fact extraction schemas utilizing the structured output infrastructure. |
 
 ---
 
@@ -166,17 +166,30 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Deterministic evaluation runner (`backend/app/evaluation/evaluator.py`) benchmarking semantic, keyword, and hybrid retrieval paths without live Gemini API calls using orthogonal unit vectors.
     - [x] Multi-cutoff evaluation ($K \in [1, 3, 5]$) and audit-ready markdown summary reporting.
     - [x] 10 unit and integration tests in `backend/tests/test_retrieval_evaluation.py` (100% pass rate).
-- [ ] **Phase 4: Structured Extraction & Deterministic Risk Rules Engine**
-  - [ ] Structured extraction schema for clauses (Renewal, Termination, Liability, Indemnification).
-  - [ ] Structured obligation extraction (responsible party, due date, frequency, source clause).
-  - [ ] Implementation of deterministic business risk rules (notice period thresholds, uncapped liability, auto-renewal deadlines).
-  - [ ] Storage and linking of generated risk signals to source contract chunks.
-- [ ] **Phase 5: Frontend Integration & Live API Wiring**
+- [ ] **Phase 6: Structured Output, Extraction & Intelligence Engine**
+  - [x] **Phase 6A: Structured Output Infrastructure** *(Completed)*
+    - [x] Defined vendor-independent `StructuredLLMProvider` abstract base class with async `generate_structured`.
+    - [x] Created `structured_output_validator.py` with custom exception hierarchy (`StructuredOutputError`, `StructuredOutputConfigurationError`, `StructuredOutputProviderError`, `StructuredOutputParseError`, `StructuredOutputValidationError`).
+    - [x] Implemented defensive JSON normalization and markdown code fence stripping (`clean_json_text`).
+    - [x] Implemented strict Pydantic model validation (`validate_structured_output`) with structured field-level error reporting.
+    - [x] Implemented `GeminiStructuredOutputProvider` using official `google-genai` SDK and `types.GenerateContentConfig(response_mime_type="application/json", response_schema=...)`.
+    - [x] Built `get_structured_llm_provider` factory with dependency injection support (`client: genai.Client | None`).
+    - [x] Extended `Settings` with `llm_provider`, `llm_model="gemini-2.5-flash"`, `llm_temperature=0.0`, and updated `.env.example`.
+    - [x] Exported all structured output classes, functions, and exceptions from `backend/app/services/__init__.py`.
+    - [x] 25 comprehensive unit and integration tests in `backend/tests/test_structured_output.py` (100% mocked, 0 real API calls, 100% pass rate).
+  - [ ] **Phase 6B: Structured Clause & Fact Extraction**
+    - [ ] Structured extraction schemas for clauses (Renewal, Termination, Liability, Indemnification).
+    - [ ] Structured obligation extraction (responsible party, due date, frequency, source clause).
+    - [ ] Linking of extracted entities to source contract chunks.
+  - [ ] **Phase 6C: Deterministic Risk Rules Engine**
+    - [ ] Implementation of deterministic business risk rules (notice period thresholds, uncapped liability, auto-renewal deadlines).
+    - [ ] Generation and database persistence of `RiskSignal` records.
+- [ ] **Phase 7: Frontend Integration & Live API Wiring**
   - [ ] Replacement of static mock data with API client services.
   - [ ] Upload wizard connection to backend ingestion pipeline.
   - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
   - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 6: Authentication, Evaluation, Testing & Production Hardening**
+- [ ] **Phase 8: Authentication, Evaluation, Testing & Production Hardening**
   - [ ] User authentication and organization-level multi-tenancy.
   - [ ] Retrieval evaluation suite (precision, recall, hallucination rate).
   - [ ] Automated end-to-end and integration tests.
@@ -266,3 +279,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-12 | Python Bytecode Compilation (Phase 5D) | `python -m compileall app/evaluation` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-12 | Frontend Build (Phase 5D Check) | `npm run build` | **PASSED** (built in 487ms, 0 errors) |
 | 2026-09-12 | TypeScript Verification (Phase 5D Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-13 | Phase 6A Structured Output Tests | `pytest tests/test_structured_output.py -v` | **PASSED** (25 passed, 0 skipped, 100% mocked) |
+| 2026-09-13 | Phase 4A Regression Verification | `pytest tests/test_embedding_provider.py -v` | **PASSED** (23 passed, 0 skipped, 100% mocked) |
+| 2026-09-13 | Python Bytecode Compilation (Phase 6A) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
+| 2026-09-13 | Frontend Build (Phase 6A Check) | `npm run build` | **PASSED** (built in 463ms, 0 errors) |
+| 2026-09-13 | TypeScript Verification (Phase 6A Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |

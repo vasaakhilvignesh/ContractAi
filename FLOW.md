@@ -137,7 +137,14 @@ FastAPI Application (`backend/app/main.py`)
    │    ├── get_embedding_provider (Factory function for provider instantiation)
    │    ├── embedding_generation_service (Atomic persistence, idempotency filtering, 768-dim validation)
    │    ├── retrieval_service (Contract-scoped pgvector cosine similarity search, top-k ranking, threshold filtering)
-   │    └── keyword_retrieval_service (Contract-scoped PostgreSQL Full-Text Search, websearch_to_tsquery, ts_rank_cd)
+   │    ├── keyword_retrieval_service (Contract-scoped PostgreSQL Full-Text Search, websearch_to_tsquery, ts_rank_cd)
+   │    └── hybrid_retrieval_service (Reciprocal Rank Fusion - RRF combining semantic & keyword search)
+   │
+   ├── Structured Output & LLM Layer (Phase 6A — `backend/app/services/`):
+   │    ├── StructuredLLMProvider (ABC for vendor-independent structured output generation)
+   │    ├── GeminiStructuredOutputProvider (Google Gemini gemini-2.5-flash via google-genai SDK, response_schema mode)
+   │    ├── validate_structured_output (Strict Pydantic v2 validation, fence stripping, structured error formatting)
+   │    └── get_structured_llm_provider (Factory function for provider resolution and dependency injection)
    │
    ▼ SQLAlchemy 2.0 Engine & Session (`backend/app/db/session.py`)
 Relational Models (`backend/app/models/`):

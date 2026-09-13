@@ -86,6 +86,28 @@ from app.services.hybrid_retrieval_service import (
     query_contract_hybrid,
 )
 
+from app.services.structured_output_validator import (
+    StructuredOutputError,
+    StructuredOutputConfigurationError,
+    StructuredOutputProviderError,
+    StructuredOutputParseError,
+    StructuredOutputValidationError,
+    clean_json_text,
+    validate_structured_output,
+)
+
+from app.services.structured_output_provider import (
+    StructuredLLMProvider,
+)
+
+from app.services.gemini_structured_output_provider import (
+    GeminiStructuredOutputProvider,
+)
+
+from app.services.structured_output_factory import (
+    get_structured_llm_provider,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -140,4 +162,14 @@ __all__ = [
     "compute_rrf_score",
     "reciprocal_rank_fusion",
     "query_contract_hybrid",
+    "StructuredOutputError",
+    "StructuredOutputConfigurationError",
+    "StructuredOutputProviderError",
+    "StructuredOutputParseError",
+    "StructuredOutputValidationError",
+    "clean_json_text",
+    "validate_structured_output",
+    "StructuredLLMProvider",
+    "GeminiStructuredOutputProvider",
+    "get_structured_llm_provider",
 ]

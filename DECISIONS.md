@@ -242,16 +242,25 @@ Format for each record:
 - **Phase:** Phase 5D
 - **Date:** 2026-09-12
 
+### DEC-029: Structured Output Infrastructure & Gemini Provider Abstraction
+- **Decision:** Implement a vendor-independent structured output validation layer (`structured_output_validator.py`) and provider abstraction (`StructuredLLMProvider`) backed by Google Gemini (`GeminiStructuredOutputProvider`) via the official `google-genai` SDK. Enforce strict Pydantic v2 model validation, handle markdown code fence stripping (````json ... ````), and provide explicit custom exception hierarchies (`StructuredOutputParseError`, `StructuredOutputValidationError`, `StructuredOutputProviderError`, `StructuredOutputConfigurationError`).
+- **Context:** Phase 6A requires a reusable, reliable foundation for structured LLM responses prior to implementing business schemas (clauses, obligations, facts, risk analysis).
+- **Why this decision was made:** Google Gemini natively supports structured outputs (`GenerateContentConfig(response_mime_type="application/json", response_schema=schema)`), aligning with our existing Gemini embedding infrastructure (DEC-010) and avoiding secondary vendor dependencies (Rule 2). Isolating provider-specific logic behind `StructuredLLMProvider` decouples domain schemas from Gemini APIs and allows swapping providers or injecting mock clients for zero-cost, 100% deterministic test execution. A defensive post-processing validator ensures robustness against edge cases such as markdown fences, unclosed brackets, or type mismatches.
+- **Alternatives considered:** Instructor library; raw unconstrained JSON prompt generation with manual regex; OpenAI Structured Outputs.
+- **Why alternatives were rejected:** The Instructor library adds an external dependency that wraps SDK clients opacity and violates Rule 2 when Pydantic v2 + `google-genai` native JSON schema achieves the same goal with full transparency and zero extra weight. Unconstrained prompt parsing frequently hallucinates malformed JSON. OpenAI adds an unnecessary multi-vendor billing dependency when Gemini is already the primary AI provider.
+- **Consequences / Trade-offs:** Upstream LLM responses must strictly conform to target Pydantic schemas; failures raise explicit typed exceptions that callers must handle or retry. Domain-specific schemas remain separate from the provider infrastructure.
+- **Phase:** Phase 6A
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
-The following architectural decisions have **not yet been made** and will be formally resolved in subsequent phases:
+The following architectural decisions have **not yet been made** or are partially resolved:
 
 ### DEC-011: LLM Provider for Extraction & Analysis
-- **Status:** **Not decided yet.**
-- **Candidates:** Google Gemini (via official SDK / Firebase AI Logic), OpenAI GPT-4o / GPT-4o-mini, Anthropic Claude 3.5 Sonnet, or local models.
-- **Considerations:** Long context window, structured JSON output enforcement, cost, and latency.
+- **Status:** **Resolved in Phase 6A (DEC-029):** Google Gemini (`gemini-2.5-flash` via official `google-genai` SDK) selected as the primary provider with `StructuredLLMProvider` abstraction.
+- **Remaining Open Question:** Secondary fallback provider (e.g. Claude 3.5 Sonnet or OpenAI GPT-4o-mini) if Gemini rate limits or availability requires redundancy.
 
 ### DEC-012: Post-Retrieval Reranking Architecture
 - **Status:** **Not decided yet.**
@@ -260,9 +269,8 @@ The following architectural decisions have **not yet been made** and will be for
 - **Considerations:** Latency budget vs marginal MRR/NDCG gain.
 
 ### DEC-013: Structured Output Schema & Extraction Technique
-- **Status:** **Not decided yet.**
-- **Candidates:** Pydantic models with OpenAI/Gemini Structured Outputs, Instructor, JSON schema mode.
-- **Considerations:** Strict type validation for clauses, obligations, renewal dates, notice periods, and liability caps.
+- **Status:** **Resolved in Phase 6A (DEC-029):** Pydantic v2 schemas validated with `validate_structured_output` and Gemini JSON schema enforcement.
+- **Remaining Open Question:** Domain-specific field schemas for contract clauses, obligations, and fact extraction (to be implemented in downstream extraction phases).
 
 ### DEC-014: Deterministic Risk Rule Architecture
 - **Status:** **Not decided yet.**

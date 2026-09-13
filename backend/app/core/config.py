@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     embedding_dimension: int = 768
     embedding_batch_size: int = 100
 
+    # ----------------------------------------------------------------
+    # Structured LLM Provider (Phase 6A — Google Gemini)
+    # ----------------------------------------------------------------
+    llm_provider: str = "gemini"
+    llm_model: str = "gemini-2.5-flash"
+    llm_temperature: float = 0.0
+
 
 
     @field_validator("database_url")
