@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 9A–9E: Grounded RAG Generation & Citation Validation** |
+| **Current Phase** | **Phase 10A–10E: AI Analyst API & Multi-Contract RAG** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `beb4f12` ("feat: add deterministic contract risk engine") |
+| **Last Verified State** | Backend: 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `d87f0ad` ("feat: add grounded rag generation") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 10: Frontend Integration & Interactive Citation Highlighting** |
-| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, and grounded RAG endpoints. |
+| **Next Phase** | **Phase 11: Frontend Integration & Interactive Citation Highlighting** |
+| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, and analyst endpoints. |
 
 ---
 
@@ -270,12 +270,31 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Safe deterministic not-found response without LLM invocation when evidence is absent or below threshold.
     - [x] REST endpoint `POST /contracts/{contract_id}/query/grounded` (and `/api/v1` alias).
     - [x] 9 comprehensive unit and integration tests in `backend/tests/test_grounded_rag.py` (100% pass rate).
-- [ ] **Phase 10: Frontend Integration & Interactive Citation Highlighting**
+- [x] **Phase 10: AI Analyst API & Multi-Contract RAG (Phase 10A–10E)** *(Completed)*
+  - [x] **Phase 10A: Analyst API Foundation** *(Completed)*
+    - [x] Dedicated service layer in `backend/app/services/analyst_service.py` built on grounded RAG pipeline.
+    - [x] Pydantic v2 schemas in `backend/app/schemas/analyst.py` (`AnalystQueryResponse`, `SingleContractAnalystRequest`, `CrossContractAnalystRequest`).
+    - [x] Exception handling wrapping provider and scoping errors (`AnalystServiceError`, `ContractScopingError`).
+  - [x] **Phase 10B: Single-Contract Questions** *(Completed)*
+    - [x] Natural language questions against a single contract (`ask_contract_analyst_single`).
+    - [x] Hybrid retrieval -> bounded context -> structured LLM generation -> citation validation.
+  - [x] **Phase 10C: Cross-Contract Multi-Document Questions** *(Completed)*
+    - [x] Multi-contract comparative question-answering (`ask_contract_analyst_cross`) across 2 to 10 contracts.
+    - [x] Strict per-contract scoping, distinct section headers, and zero evidence bleeding across contracts.
+  - [x] **Phase 10D: Evidence-Backed Responses** *(Completed)*
+    - [x] Every factual claim mapped to verified citations (`AnalystEvidenceCitation`) preserving 6-tier lineage: `answer → claim → evidence → chunk → page → contract`.
+    - [x] Deterministic validation detecting text mismatches, wrong-contract chunks, and unsupported claims.
+  - [x] **Phase 10E: Retrieval & Debug Metadata** *(Completed)*
+    - [x] Optional retrieval debug metadata (`include_debug=True`) returning method, selected chunks with ranks/scores, context char count, and timing.
+    - [x] Zero exposure of vector embeddings or credentials.
+    - [x] REST endpoints: `POST /analyst/query`, `POST /analyst/contracts/{contract_id}/query`, and `POST /analyst/query/cross` (with `/api/v1` aliases).
+    - [x] 10 comprehensive unit and integration tests in `backend/tests/test_analyst_api.py` (100% pass rate).
+- [ ] **Phase 11: Frontend Integration & Interactive Citation Highlighting**
   - [ ] Replacement of static mock data with API client services.
   - [ ] Upload wizard connection to backend ingestion pipeline.
   - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
   - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 11: Authentication, Evaluation, Testing & Production Hardening**
+- [ ] **Phase 12: Authentication, Evaluation, Testing & Production Hardening**
 
 ---
 

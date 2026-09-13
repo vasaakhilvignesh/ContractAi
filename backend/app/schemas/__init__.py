@@ -116,6 +116,17 @@ from app.schemas.rag import (
     RAGQueryResponse,
 )
 
+from app.schemas.analyst import (
+    AnalystQueryScope,
+    ChunkDebugInfo,
+    RetrievalDebugInfo,
+    AnalystEvidenceCitation,
+    AnalystAnswerClaim,
+    SingleContractAnalystRequest,
+    CrossContractAnalystRequest,
+    AnalystQueryResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -199,4 +210,12 @@ __all__ = [
     "LLMClaimItem",
     "StructuredRAGAnswerLLM",
     "RAGQueryResponse",
+    "AnalystQueryScope",
+    "ChunkDebugInfo",
+    "RetrievalDebugInfo",
+    "AnalystEvidenceCitation",
+    "AnalystAnswerClaim",
+    "SingleContractAnalystRequest",
+    "CrossContractAnalystRequest",
+    "AnalystQueryResponse",
 ]

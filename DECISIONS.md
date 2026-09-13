@@ -319,6 +319,16 @@ Format for each record:
 - **Phase:** Phase 9A–9E
 - **Date:** 2026-09-13
 
+### DEC-037: AI Analyst API Architecture & Multi-Contract Scoping
+- **Decision:** Implement dedicated AI Analyst service and REST endpoints (`POST /analyst/query`, `POST /analyst/contracts/{contract_id}/query`, `POST /analyst/query/cross`) providing single-contract and multi-contract comparative question-answering. Enforce strict document scoping across multiple contracts by isolating retrieval per contract, formatting partitioned context blocks with explicit contract boundary delimiters, and validating citations against each referenced contract's chunk records. Flag citations referencing chunks outside queried contracts with `CitationVerificationStatus.WRONG_CONTRACT`. Return structured claims with full 6-tier evidence lineage (`answer → claim → evidence → chunk → page → contract`) and optional retrieval debug metadata (method, selected chunks, ranks, scores) while strictly prohibiting the exposure of vector embeddings or secret credentials.
+- **Context:** Enterprise users need both deep single-contract inquiries and comparative contract analysis (e.g. comparing SLA termination or liability caps across multiple vendors) without risk of cross-document hallucination or evidence bleeding.
+- **Why this decision was made:** Grouping single-contract and multi-contract analysis under a dedicated analyst service layer ensures consistent claim citation validation, confidence gating, and evidence linkage. Strict scoping prevents the LLM from misattributing obligations between competing agreements. Exposing optional debug metadata provides full auditability of retrieval decisions without leaking sensitive infrastructure secrets.
+- **Alternatives considered:** Merging chunks from all contracts into an unstructured retrieval pool; delegating cross-contract comparisons purely to frontend multi-prompting; omitting citation validation on multi-contract queries.
+- **Why alternatives were rejected:** Unstructured chunk pooling causes evidence bleeding across contracts. Frontend orchestration increases latency and fails to produce unified comparative evidence traces. Omitting citation validation allows hallucinated comparisons.
+- **Consequences / Trade-offs:** Multi-contract queries require running hybrid retrieval per contract and constructing larger bounded prompt contexts.
+- **Phase:** Phase 10A–10E
+- **Date:** 2026-09-13
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

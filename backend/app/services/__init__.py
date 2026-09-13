@@ -177,6 +177,13 @@ from app.services.rag_service import (
     answer_contract_query_grounded,
 )
 
+from app.services.analyst_service import (
+    AnalystServiceError,
+    ContractScopingError,
+    ask_contract_analyst_single,
+    ask_contract_analyst_cross,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -289,4 +296,8 @@ __all__ = [
     "build_grounded_context",
     "verify_citation",
     "answer_contract_query_grounded",
+    "AnalystServiceError",
+    "ContractScopingError",
+    "ask_contract_analyst_single",
+    "ask_contract_analyst_cross",
 ]

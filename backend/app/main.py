@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.db.session import check_database_connection
 from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema
 from app.api.v1.contracts import router as contracts_router
+from app.api.v1.analyst import router as analyst_router
 
 
 # ====================================================================
@@ -109,6 +110,8 @@ def _register_routes(app: FastAPI) -> None:
     # Register domain routers
     app.include_router(contracts_router)
     app.include_router(contracts_router, prefix="/api/v1")
+    app.include_router(analyst_router)
+    app.include_router(analyst_router, prefix="/api/v1")
 
     @app.get(
         "/health",
