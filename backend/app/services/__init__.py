@@ -184,6 +184,12 @@ from app.services.analyst_service import (
     ask_contract_analyst_cross,
 )
 
+from app.services.comparison_service import (
+    ComparisonServiceError,
+    ComparisonScopingError,
+    compare_contracts_structured,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -300,4 +306,7 @@ __all__ = [
     "ContractScopingError",
     "ask_contract_analyst_single",
     "ask_contract_analyst_cross",
+    "ComparisonServiceError",
+    "ComparisonScopingError",
+    "compare_contracts_structured",
 ]

@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 10A–10E: AI Analyst API & Multi-Contract RAG** |
+| **Current Phase** | **Phase 11A–11E: Cross-Contract Comparison API** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `d87f0ad` ("feat: add grounded rag generation") |
+| **Last Verified State** | Backend: 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `4c0ded6` ("feat: add ai analyst api and multi-contract rag") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 11: Frontend Integration & Interactive Citation Highlighting** |
-| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, and analyst endpoints. |
+| **Next Phase** | **Phase 12: Frontend Integration & Interactive Citation Highlighting** |
+| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, and comparison endpoints. |
 
 ---
 
@@ -289,12 +289,31 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Zero exposure of vector embeddings or credentials.
     - [x] REST endpoints: `POST /analyst/query`, `POST /analyst/contracts/{contract_id}/query`, and `POST /analyst/query/cross` (with `/api/v1` aliases).
     - [x] 10 comprehensive unit and integration tests in `backend/tests/test_analyst_api.py` (100% pass rate).
-- [ ] **Phase 11: Frontend Integration & Interactive Citation Highlighting**
+- [x] **Phase 11: Cross-Contract Comparison API (Phase 11A–11E)** *(Completed)*
+  - [x] **Phase 11A: Comparison API Foundation** *(Completed)*
+    - [x] Strongly typed Pydantic v2 schemas in `backend/app/schemas/comparison.py` (`ContractComparisonRequest`, `ContractComparisonResponse`, `FieldComparisonRow`, `DeterministicFieldDifference`, `ObligationComparisonItem`).
+    - [x] Standalone service layer in `backend/app/services/comparison_service.py` with custom exception handling (`ComparisonServiceError`, `ComparisonScopingError`).
+    - [x] REST API endpoints: `POST /contracts/compare` and `GET /contracts/compare` (with versioned `/api/v1` aliases).
+  - [x] **Phase 11B: Structured Cross-Contract Comparison** *(Completed)*
+    - [x] Multi-contract side-by-side comparison across 2 to 10 contracts using already-extracted `ContractFact`, `Obligation`, `Clause`, and `Contract` metadata.
+    - [x] Compared fields include contract value, notice period, payment terms, renewal terms, liability caps, governing law, and key obligations.
+    - [x] Missing or unavailable terms clearly distinguished (`is_available=False`, `MISSING_FIELD`) without hallucination or default guessing.
+  - [x] **Phase 11C: Evidence-Backed Comparison & Lineage Audit** *(Completed)*
+    - [x] Every compared field value includes full 6-tier evidence lineage: `comparison → fact/obligation/clause → chunk → page → contract`.
+    - [x] Lineage verification strictly validates contract ownership and flags foreign contract chunks with `LineageStatus.WRONG_CONTRACT`.
+  - [x] **Phase 11D: Deterministic Variance & Difference Analysis** *(Completed)*
+    - [x] 100% code-based deterministic variance calculation for financial sums, day durations, and text mismatches.
+    - [x] Identifies min/max contracts, percentage variance from baseline, absolute delta, and severity (`HIGH`, `MEDIUM`, `LOW`, `INFO`).
+    - [x] Zero real LLM or external API calls required for comparison.
+  - [x] **Phase 11E: REST API Endpoints & Contract Scoping Enforcement** *(Completed)*
+    - [x] Rejection of fewer than 2 or greater than 10 contract IDs, duplicate IDs, and non-existent IDs.
+    - [x] 7 comprehensive unit, integration, and API tests in `backend/tests/test_comparison_api.py` (100% pass rate against live Neon PostgreSQL).
+- [ ] **Phase 12: Frontend Integration & Interactive Citation Highlighting**
   - [ ] Replacement of static mock data with API client services.
   - [ ] Upload wizard connection to backend ingestion pipeline.
   - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
   - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 12: Authentication, Evaluation, Testing & Production Hardening**
+- [ ] **Phase 13: Authentication, Evaluation, Testing & Production Hardening**
 
 ---
 
@@ -406,3 +425,6 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-13 | Python Bytecode Compilation (Phase 6D) | `python -m compileall app/` | **PASSED** (all modules compiled cleanly, 0 errors) |
 | 2026-09-13 | Frontend Build (Phase 6D Check) | `npm run build` | **PASSED** (built in 435ms, 0 errors) |
 | 2026-09-13 | TypeScript Verification (Phase 6D Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-13 | Phase 11 Comparison API Tests | `pytest tests/test_comparison_api.py -v` | **PASSED** (7 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-13 | Frontend Build (Phase 11 Check) | `npm run build` | **PASSED** (built in 488ms, 0 errors) |
+| 2026-09-13 | TypeScript Verification (Phase 11 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |

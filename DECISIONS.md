@@ -327,6 +327,14 @@ Format for each record:
 - **Why alternatives were rejected:** Unstructured chunk pooling causes evidence bleeding across contracts. Frontend orchestration increases latency and fails to produce unified comparative evidence traces. Omitting citation validation allows hallucinated comparisons.
 - **Consequences / Trade-offs:** Multi-contract queries require running hybrid retrieval per contract and constructing larger bounded prompt contexts.
 - **Phase:** Phase 10A–10E
+### DEC-038: Cross-Contract Structured Comparison Engine
+- **Decision:** Implement dedicated cross-contract comparison schemas (`comparison.py`), service layer (`comparison_service.py`), and REST API endpoints (`POST /contracts/compare` and `GET /contracts/compare` with versioned `/api/v1` aliases). The comparison engine evaluates 2 to 10 contracts using already-extracted structured data (`Contract`, `ContractFact`, `Obligation`, `Evidence`). Fields compared include financial values, notice periods, term dates, governing law, and key obligations. Computes deterministic variance analysis (percentage variance, absolute numeric differences, day differences, missing term detection) entirely in application code without LLM hallucination. Generates complete 6-tier evidence citations (`comparison -> fact/obligation -> chunk -> page -> contract`) and strictly detects and flags broken or mismatched contract lineage (`WRONG_CONTRACT`).
+- **Context:** Enterprise procurement, legal, and vendor operations teams must compare terms across competing vendor agreements or renewals without relying on ungrounded or non-deterministic generative summaries.
+- **Why this decision was made:** By leveraging deterministic comparison logic directly over verified structured facts and obligations, we eliminate hallucination, guarantee 100% mathematical consistency for financial/notice comparisons, and preserve rigorous auditability back to exact contract page numbers. Reusing existing extracted facts avoids redundant LLM API costs and token latency.
+- **Alternatives considered:** Feeding all contract texts directly into an LLM context window to generate a comparative table in Markdown/JSON.
+- **Why alternatives were rejected:** Raw LLM generation across multiple large documents is non-deterministic, expensive, prone to missing subtle differences in numerical terms, and frequently hallucinates citations or mixes up parties.
+- **Consequences / Trade-offs:** Comparison relies on existing extracted structured facts and obligations. If a field was not extracted or is absent in a contract, the engine safely marks it as unavailable (`is_available=False`, `MISSING_FIELD`) rather than guessing.
+- **Phase:** Phase 11A–11E
 - **Date:** 2026-09-13
 
 ---

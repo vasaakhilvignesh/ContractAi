@@ -23,6 +23,7 @@ from app.db.session import check_database_connection
 from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema
 from app.api.v1.contracts import router as contracts_router
 from app.api.v1.analyst import router as analyst_router
+from app.api.v1.comparison import router as comparison_router
 
 
 # ====================================================================
@@ -108,6 +109,9 @@ def _register_routes(app: FastAPI) -> None:
     """Register all application routes."""
 
     # Register domain routers
+    # Note: comparison_router (/contracts/compare) must precede contracts_router (/contracts/{contract_id})
+    app.include_router(comparison_router)
+    app.include_router(comparison_router, prefix="/api/v1")
     app.include_router(contracts_router)
     app.include_router(contracts_router, prefix="/api/v1")
     app.include_router(analyst_router)

@@ -127,6 +127,19 @@ from app.schemas.analyst import (
     AnalystQueryResponse,
 )
 
+from app.schemas.comparison import (
+    DifferenceType,
+    DifferenceSeverity,
+    ComparisonEvidenceCitation,
+    ComparedContractValue,
+    DeterministicFieldDifference,
+    FieldComparisonRow,
+    ObligationComparisonItem,
+    ContractComparisonRequest,
+    ContractMetadataHeader,
+    ContractComparisonResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -218,4 +231,14 @@ __all__ = [
     "SingleContractAnalystRequest",
     "CrossContractAnalystRequest",
     "AnalystQueryResponse",
+    "DifferenceType",
+    "DifferenceSeverity",
+    "ComparisonEvidenceCitation",
+    "ComparedContractValue",
+    "DeterministicFieldDifference",
+    "FieldComparisonRow",
+    "ObligationComparisonItem",
+    "ContractComparisonRequest",
+    "ContractMetadataHeader",
+    "ContractComparisonResponse",
 ]
