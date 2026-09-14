@@ -479,5 +479,90 @@ Incoming Client Request (REST API / Upload / RAG Query)
           - Scrubs PostgreSQL credentials, GEMINI_API_KEY, JWT secrets, Bearer tokens
           - FastAPI global exception handlers sanitize all client-facing error details
           - Zero plaintext credentials exposed in logs, tracebacks, or API error payloads
+
+---
+
+### 7. Performance & Latency Observability Architecture (Phase 19)
+
+ContractIQ instruments all critical request paths and processing pipelines with correlation IDs, stage profiling, and strict secret masking:
+
+```
+Inbound HTTP Request
+   │
+   ▼
+[RequestIDMiddleware]
+   ├── Extracts incoming 'X-Request-ID' or generates new UUIDv4
+   ├── Attaches request_id to contextvars & request.state.request_id
+   ├── Injects 'X-Request-ID' header into outbound Response
+   │
+   ▼
+Request Execution & Subsystem Profiling
+   ├── Retrieval Pipeline (Semantic pgvector, Keyword tsvector, RRF Hybrid Fusion)
+   ├── Embedding Batch Generation (Gemini text-embedding-004)
+   ├── Structured LLM Inference (Gemini 3.8 Flash via Pydantic schema)
+   ├── Grounded Claim Verification & Verbatim Citation Lineage
+   └── Database Operations (Composite-indexed lookups on document_chunks, clauses, facts)
+   │
+   ▼
+Outbound Logging & Secret Sanitization
+   ├── SafeLoggingFilter: regex-masks DATABASE_URL, Bearer tokens, Gemini API keys
+   ├── JSONLineFormatter (production mode): structured machine-readable JSON logs
+   └── Health Probes:
+         - GET /health/liveness  -> 200 OK (Process responsive)
+         - GET /health/readiness -> 200/503 (Neon PostgreSQL connectivity verified)
 ```
 
+---
+
+### 8. Production Deployment & Runtime Architecture (Phase 20)
+
+ContractIQ is designed for dual-tier, stateless cloud hosting with managed persistence:
+
+```mermaid
+flowchart TD
+    subgraph Clients["Browser & API Clients"]
+        User["End User / Procurement Counsel"]
+    end
+
+    subgraph EdgeFrontend["Frontend Tier (Render Static Site / Vercel / Netlify)"]
+        CDN["Global Edge CDN"]
+        SPA["React 19 + Vite 8 SPA"]
+        Rewrites["SPA Redirect Rules<br>(_redirects / vercel.json: /* -> /index.html 200)"]
+    end
+
+    subgraph AppTier["Backend API Tier (Render Web Service / Docker Container)"]
+        NginxOrCaddy["Reverse Proxy / SSL Termination"]
+        Entrypoint["Entrypoint Script (backend/start.sh)<br>alembic upgrade head"]
+        Uvicorn["Uvicorn ASGI Server<br>(uvicorn app.main:app --host 0.0.0.0 --port $PORT)"]
+        FastAPI["FastAPI Production Engine<br>(APP_ENV=production, APP_DEBUG=false)"]
+
+        subgraph Guards["Runtime Security Guards"]
+            ConfigValidation["Pydantic Settings Validator<br>(Enforces >=32char JWT Secret, Disables /docs)"]
+            CORSMiddleware["Strict CORS Middleware<br>(Explicit Allowed Origins, No Wildcard with Credentials)"]
+            SafeLogger["Safe Structured Logging<br>(JSON-lines, Correlation IDs, Secret Masking)"]
+        end
+    end
+
+    subgraph ManagedServices["Managed Cloud Infrastructure"]
+        NeonDB[("Neon Serverless PostgreSQL 18<br>+ pgvector 0.8.6 Extension<br>(Database neondb, branch production)")]
+        GeminiAPI["Google Gemini API<br>(gemini-3.8-flash + text-embedding-004)"]
+    end
+
+    User -->|HTTPS Request| CDN
+    CDN -->|Static Assets / Bundle| SPA
+    CDN -.->|Client-Side Route Fallback| Rewrites
+    SPA -->|Authenticated REST Calls / Bearer JWT| NginxOrCaddy
+    NginxOrCaddy --> Entrypoint
+    Entrypoint --> Uvicorn
+    Uvicorn --> FastAPI
+    FastAPI --> Guards
+    Guards -->|SQLAlchemy 2.0 Pool + SSL| NeonDB
+    Guards -->|GenAI Python SDK + HTTPS| GeminiAPI
+```
+
+#### Runtime Deployment Data Flow & Guarantees:
+1. **Frontend Boot:** Vite compiles React SPA with static asset references. `VITE_API_BASE_URL` directs client API requests to the production API gateway URL.
+2. **Client-Side Routing:** Deep links (e.g. `/contracts/123`, `/analyst`, `/risks`) serve `index.html` via `_redirects` / `vercel.json` rewrite rules with HTTP 200 status, allowing React Router to hydrate seamlessly without 404s.
+3. **Container Boot & Startup Sequence:** `backend/Dockerfile` runs non-root `appuser`. The entrypoint `backend/start.sh` executes `alembic upgrade head` before Uvicorn starts, guaranteeing that database migrations are applied before web workers accept incoming traffic.
+4. **Production Configuration Enforcement:** In `APP_ENV=production`, `Settings` strictly validates that `JWT_SECRET_KEY` is not a default development placeholder and contains $\ge 32$ characters, `APP_DEBUG` is forced to `false`, OpenAPI `/docs` is hidden, and `CORS_ORIGINS` is strictly enforced to designated client domains.
+5. **Stateless Scale-Out:** Backend instances do not store contract state locally on persistent disks; files are processed in-memory or streamed, and all state resides safely in Neon PostgreSQL and Gemini cloud endpoints.

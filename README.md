@@ -1,59 +1,49 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 5D Complete (Retrieval Evaluation & Benchmarking Framework Verified)
+> **Status:** Phase 20 Complete (Production Deployment, Packaging & Configuration Hardened)
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
 
 ## 1. Project Overview
 
-**ContractIQ** is an evidence-first contract intelligence platform designed to move far beyond generic "chat with your PDF" interfaces. It provides auditable, deterministic, and verifiable intelligence across enterprise contract portfolios.
+**ContractIQ** is an enterprise contract intelligence platform built on the principle that contract risk analysis must be auditable, deterministic, and traceable to exact source clauses. It moves far beyond generic "chat with your PDF" interfaces by decoupling evidence retrieval from risk evaluation.
 
 ### Core Architectural Principle
 
 ```
 RAG finds evidence.
 Structured extraction turns evidence into data.
-Deterministic rules turn structured data into actionable intelligence.
+Deterministic rules turn structured data into actionable risk intelligence.
 ```
 
 - **Semantic understanding:** Large Language Models (LLMs) are used strictly where natural language parsing is required—extracting specific clauses, dates, values, and obligations with exact page-level citations.
 - **Deterministic logic:** Application code and rule engines evaluate business and legal risk conditions (e.g. *if notice period < 30 days, trigger CRITICAL risk*). The LLM does **not** guess risk severity nondeterministically.
-- **Evidence lineage:** Every risk flag, obligation, and answer must trace directly to a verifiable clause and page number in the original contract document.
-- **Unambiguous fallback:** If evidence is insufficient or absent, the system explicitly returns "not found" rather than generating speculative answers.
+- **Evidence lineage:** Every risk flag, obligation, and answer traces directly to a verifiable clause and 1-indexed page number in the original contract document.
+- **Unambiguous fallback:** If evidence is insufficient or absent, the system explicitly returns "not found" or unsupported claim status rather than generating speculative answers.
 
 ---
 
-## 2. Architecture Baseline
-
-### Implemented Architecture (Frontend Baseline + Phase 1 DB + Phase 2 Contract Processing Foundation)
+## 2. Production Architecture
 
 | Layer | Technology | Details |
 | :--- | :--- | :--- |
-| **Frontend Framework** | React 19 (`react` 19.0.0, `react-dom` 19.0.0) | StrictMode enabled, functional components with hooks |
+| **Frontend Framework** | React 19 (`react` 19.0.0, `react-dom` 19.0.0) | Functional components with hooks, strict mode, modular services |
 | **Language (Frontend)** | TypeScript 5.7 (`strict: true`) | Target ES2020, bundler module resolution, path alias `@/*` |
-| **Build Tooling** | Vite 8 (`@vitejs/plugin-react`) | Development server and production bundler (`port: 8443`, `host: 0.0.0.0`) |
-| **Routing** | React Router v7 (`react-router-dom` 7.18.3) | Client-side `BrowserRouter` with nested `<Shell />` layout and route-driven navigation |
-| **Styling & Design System** | Tailwind CSS v4 (`@tailwindcss/vite`) | Utility-first with CSS variables in `src/index.css` (`--primary`, `--accent`, `--risk-*`), Inter and JetBrains Mono typography |
-| **Mock Data Layer** | In-memory TypeScript definitions (`src/data/mock.ts`) | Strongly typed models for `Contract`, `Risk`, `Obligation`, `AuditEvent`, and status enums |
-| **Backend API** | Python 3.13 + FastAPI (`fastapi==0.115.5`, `uvicorn==0.32.1`, `python-multipart==0.0.32`) | CORS middleware, lifespan startup/shutdown, `/health`, `/`, Contract CRUD (`/contracts`), PDF Upload (`/contracts/{id}/upload`), and Processing State (`/contracts/{id}/processing-status`) |
-| **Database ORM & Driver** | SQLAlchemy 2.0 (`sqlalchemy==2.0.36`) + `psycopg2-binary==2.9.10` | 7 domain models, DeclarativeBase, pool pre-ping, connection health check |
-| **Primary Database** | Neon PostgreSQL (cloud-managed serverless) | Branch `production`, Database `neondb` (PostgreSQL 18.6 verified) |
-| **Vector Extension** | `pgvector` (`pgvector==0.3.6` on PostgreSQL) | Version 0.8.6 verified on Neon; `Vector` column mapped on `DocumentChunk` |
-| **Migration Tooling** | Alembic (`alembic==1.14.0`) | Migration `f31920b7c102` applied to Neon PostgreSQL |
-| **Observability & Latency** | Correlation IDs & structured JSON logging | `RequestIDMiddleware` + `SafeLoggingFilter` + stage profiling |
-
-
-### Planned Target Architecture *(PLANNED — Future Phases)*
-
-| Component | Planned Technology / Strategy | Status |
-| :--- | :--- | :--- |
-| **Document Processing** | PDF text extraction preserving page boundaries & tables | *Phase 2 PLANNED* |
-| **Chunking Engine** | Clause-aware semantic chunking with page metadata | *Phase 2 PLANNED* |
-| **Retrieval Pipeline** | Hybrid Search (pgvector semantic similarity [Phase 5A] + PostgreSQL tsvector keyword search [Phase 5B] + Reciprocal Rank Fusion [Phase 5C]) + Evaluation Framework (Precision@K, Recall@K, MRR@K [Phase 5D]) | *Phase 5D IMPLEMENTED* |
-| **LLM Orchestration** | Gemini / OpenAI with strict Structured Outputs (JSON Schema / Pydantic) | *Phase 4 PLANNED* |
-| **Risk Rules Engine** | Deterministic business rules evaluating extracted structured facts | *Phase 4 PLANNED* |
-| **Authentication & RBAC** | Per-user document isolation and role-based permissions | *Phase 6 PLANNED* |
+| **Build Tooling** | Vite 8 (`@vitejs/plugin-react`) | Fast HMR in development, optimized static bundle in production |
+| **Routing** | React Router v7 (`react-router-dom` 7.18.3) | Client-side `BrowserRouter` with nested `<Shell />` layout and SPA rewrite support |
+| **Styling & Design System** | Tailwind CSS v4 (`@tailwindcss/vite`) | Utility-first with CSS variables (`--primary`, `--accent`, `--risk-*`), Inter typography |
+| **Backend API** | Python 3.13 + FastAPI (`fastapi==0.115.5`, `uvicorn==0.32.1`) | High-performance ASGI framework with CORS, lifespan startup/shutdown, and route grouping |
+| **Database ORM & Driver** | SQLAlchemy 2.0 (`sqlalchemy==2.0.36`) + `psycopg2-binary==2.9.10` | DeclarativeBase, pool pre-ping, SSL connection pooling, composite indexes |
+| **Primary Database** | Neon Serverless PostgreSQL 18.6 | Cloud-managed PostgreSQL (`neondb`, branch `production`) with SSL pooling |
+| **Vector Extension** | `pgvector` 0.8.6 | 768-dimensional vector embeddings with cosine similarity distance search |
+| **Migration Tooling** | Alembic (`alembic==1.14.0`) | Automated database versioning; migration `f31920b7c102` applied |
+| **AI / LLM Engine** | Google Gemini API via official SDK | Structured outputs with `gemini-3.8-flash`; 768-dim embeddings with `text-embedding-004` |
+| **Retrieval Pipeline** | Hybrid Search (pgvector + tsvector) | Reciprocal Rank Fusion (RRF) combining semantic vector scoring and full-text keyword rank |
+| **Security & Auth** | JWT (HS256) + Tenant Scoping | IDOR defense across all endpoints, strict file upload magic-byte validation, prompt injection shields |
+| **Observability** | Correlation IDs & Safe Structured Logging | `RequestIDMiddleware` (`X-Request-ID`), stage timing, `SafeLoggingFilter` credential scrubbing |
+| **Containerization** | Docker (Python 3.13-slim) | Non-root `appuser`, pre-flight migration entrypoint (`backend/start.sh`), automated healthcheck |
+| **Cloud Hosting** | Render Blueprint / Docker Compose / Vercel | Dual-service architecture (FastAPI Web Service + React Static Site) |
 
 ---
 
@@ -65,102 +55,167 @@ Contract Intelligence Dashboard/
 ├── DECISIONS.md               # Architectural Decision Records (ADRs)
 ├── FLOW.md                    # Current application flow & planned system architecture
 ├── PHASE_STATUS.md            # Progress tracker, known issues, and next phase actions
-├── README.md                  # This architecture baseline and setup guide
-├── backend/                   # Backend application (FastAPI + SQLAlchemy + Alembic)
-│   ├── alembic/               # Migration scripts and environment configuration
-│   ├── app/                   # Application package (main, core, db, models, schemas)
-│   ├── tests/                 # Backend test suite (pytest)
-│   ├── requirements.txt       # Python dependencies
-│   ├── pytest.ini             # Pytest configuration
-│   ├── alembic.ini            # Alembic configuration
-│   └── .env.example           # Environment template (copy to .env)
-├── index.html                 # HTML entry point
-├── package.json               # Project manifest and scripts
-├── tsconfig.json              # TypeScript configuration
-├── vite.config.ts             # Vite bundler and dev server configuration
-└── src/
-    ├── App.tsx                # Client-side router configuration
-    ├── index.css              # Global styles, fonts, and Tailwind v4 theme variables
-    ├── main.tsx               # Application root mount point
-    ├── vite-env.d.ts          # Vite client types
-    ├── components/
-    │   ├── layout/
-    │   │   ├── Header.tsx     # Breadcrumbs, search bar, notifications popover, upload button
-    │   │   ├── Shell.tsx      # Persistent layout shell (Sidebar + Header + Outlet)
-    │   │   └── Sidebar.tsx    # Workspace navigation links, branding, user profile
-    │   └── ui/
-    │       └── Badge.tsx      # RiskBadge, StatusBadge, PriorityBadge reusable components
-    ├── data/
-    │   └── mock.ts            # Centralized TypeScript mock domain entities
-    └── pages/
-        ├── Compare.tsx        # Cross-contract comparison matrix with diff highlighting
-        ├── ContractOverview.tsx # Detailed contract view (Overview, Clauses, Obligations, Risks)
-        ├── Contracts.tsx      # Contract library with search, filtering, and sorting
-        ├── Dashboard.tsx      # Executive overview with KPIs, renewals, and risk signals
-        ├── Obligations.tsx    # Obligation tracking center with filtering and detail drawer
-        ├── RiskMonitor.tsx    # Deterministic risk monitor with severity cards and evidence drawer
-        └── UploadContract.tsx # 4-stage contract upload and processing pipeline simulation
+├── README.md                  # Architecture baseline and production operations guide
+├── render.yaml                # Render Infrastructure-as-Code Blueprint (Dual Service)
+├── docker-compose.prod.yml    # Production Docker Compose multi-container stack
+├── vercel.json                # Vercel SPA client rewrite configuration
+├── .env.example               # Root frontend environment template (VITE_API_BASE_URL)
+├── package.json               # Frontend manifest and build scripts
+├── vite.config.ts             # Vite bundler and development server configuration
+├── public/                    # Static assets copied verbatim to dist/
+│   ├── _redirects             # SPA fallback rewrite rule (/* /index.html 200)
+│   └── robots.txt             # Search engine crawling rules
+├── src/                       # React 19 Frontend Application
+│   ├── App.tsx                # Client-side router configuration & protected routes
+│   ├── components/            # Reusable UI components, modals, layout shells
+│   ├── pages/                 # Full-page route views (Dashboard, Contracts, Analyst, etc.)
+│   └── services/              # API clients with dynamic VITE_API_BASE_URL resolution
+└── backend/                   # FastAPI Backend Application
+    ├── Dockerfile             # Production container definition (Python 3.13-slim, non-root)
+    ├── start.sh               # Production startup script (alembic upgrade head + uvicorn)
+    ├── alembic/               # Migration scripts and version history
+    ├── app/                   # Core application package
+    │   ├── api/               # Versioned REST routers (auth, contracts, analyst, etc.)
+    │   ├── core/              # Config, security, safe logging filter, secret scanner
+    │   ├── db/                # Database engine session factory and pgvector registration
+    │   ├── evaluation/        # Offline RAG evaluation benchmark suite & metrics
+    │   ├── models/            # SQLAlchemy 2.0 ORM models
+    │   ├── schemas/           # Pydantic v2 schemas and structured output models
+    │   └── services/          # Business logic: ingestion, hybrid search, RAG, rules
+    ├── tests/                 # Backend automated test suite (pytest)
+    └── requirements.txt       # Python dependencies
 ```
 
 ---
 
-## 4. Getting Started
+## 4. Environment Variables Reference
 
-### Prerequisites
-- Node.js (v18.x, v20.x, or later recommended)
-- npm (v9.x or later)
+### Frontend Configuration (`.env` in root)
 
-### Frontend Setup
+| Variable | Required | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `VITE_API_BASE_URL` | No | Empty (uses `/api/v1` relative proxy) | Target API origin in production (e.g. `https://contractiq-api.onrender.com/api/v1`) |
+
+### Backend Configuration (`backend/.env`)
+
+| Variable | Required in Prod | Default (Dev) | Description |
+| :--- | :--- | :--- | :--- |
+| `APP_ENV` | Yes | `development` | Set to `production` in live environments. Enforces security validators. |
+| `APP_DEBUG` | Yes | `True` | Must be `False` in production (auto-enforced if `APP_ENV=production`). |
+| `DATABASE_URL` | Yes | *None* | PostgreSQL connection string (`postgresql+psycopg2://...`). |
+| `GEMINI_API_KEY` | Yes | *None* | Google Gemini API key for structured extraction and embeddings. |
+| `JWT_SECRET_KEY` | Yes | *Dev placeholder* | Secret for signing auth tokens (must be $\ge 32$ chars in production). |
+| `CORS_ORIGINS` | Yes | `http://localhost:5173,...` | Comma-separated list of allowed frontend origins (no wildcards in prod). |
+| `GEMINI_MODEL_STRUCTURED` | No | `gemini-3.8-flash` | Gemini model name for structured JSON fact extraction. |
+| `GEMINI_MODEL_EMBEDDING` | No | `text-embedding-004` | Gemini model name for 768-dim vector embeddings. |
+
+---
+
+## 5. Production Deployment Guide
+
+### Option A: Render Blueprint Deployment (Recommended)
+
+ContractIQ includes a turnkey `render.yaml` Blueprint that deploys both the backend API and frontend static site with zero manual wiring:
+
+1. Connect your repository `vasaakhilvignesh/ContractAi` to [Render](https://render.com).
+2. Create a **New Blueprint Instance** and select the repository.
+3. Render automatically provisions:
+   - **`contractiq-api`**: FastAPI Web Service running `backend/start.sh` with automatic database migrations and health checking against `/health/liveness`.
+   - **`contractiq-web`**: Static Site building with `npm install && npm run build`, publishing `dist`, and routing all client paths via `public/_redirects`.
+4. Provide the following environment variables in the Render Dashboard for `contractiq-api`:
+   - `DATABASE_URL`: Your Neon PostgreSQL connection string.
+   - `GEMINI_API_KEY`: Your Google Gemini API key.
+   - `JWT_SECRET_KEY`: A high-entropy random string (at least 32 characters, e.g. `openssl rand -hex 32`).
+   - `CORS_ORIGINS`: The URL of your `contractiq-web` instance (e.g. `https://contractiq-web.onrender.com`).
+
+---
+
+### Option B: Production Docker Deployment
+
+To run the complete production backend container locally or on a cloud virtual machine:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/vasaakhilvignesh/ContractAi.git
+cd ContractAi
+
+# 2. Configure backend environment
+cp backend/.env.example backend/.env
+# Edit backend/.env with your production credentials
+
+# 3. Build and launch the container
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 4. Verify running services and health probe
+docker compose -f docker-compose.prod.yml ps
+curl -i http://localhost:8000/health/liveness
+curl -i http://localhost:8000/health/readiness
+```
+
+---
+
+### Option C: Frontend Deployment on Vercel / Netlify
+
+The frontend can be independently hosted on any edge static provider:
+
+1. **Root Directory:** Project root (`./`).
+2. **Build Command:** `npm run build`.
+3. **Output Directory:** `dist`.
+4. **Environment Variable:** `VITE_API_BASE_URL=https://<your-backend-api-domain>/api/v1`.
+5. Client-side routing is handled automatically:
+   - For **Vercel**: Handled by the included [`vercel.json`](./vercel.json).
+   - For **Netlify / Render**: Handled by the included [`public/_redirects`](./public/_redirects).
+
+---
+
+## 6. Local Development Quickstart
+
+### Frontend Development
 ```bash
 # Install dependencies
 npm install
 
-# Run frontend development server (http://localhost:8443)
+# Run Vite development server (http://localhost:5173 or :8443)
 npm run dev
 
-# Production build and TypeScript verification
+# Verification commands
 npm run build
 npx tsc --noEmit
 ```
 
-### Backend Setup (Python 3.13 + FastAPI + SQLAlchemy + Alembic)
+### Backend Development
 ```bash
 cd backend
 
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv .venv
-# On Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# On Linux/macOS:
-# source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1   # Windows
+# source .venv/bin/activate    # Linux/macOS
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment (copy template — never commit real secrets)
+# Configure environment
 cp .env.example .env
-# Edit .env and supply your Neon DATABASE_URL:
-# DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>/<dbname>?sslmode=require
+# Edit .env with your Neon DATABASE_URL and GEMINI_API_KEY
 
 # Run database migrations
 alembic upgrade head
 
-# Run backend test suite
+# Run automated tests
 pytest tests/ -v
 
-# Run FastAPI backend development server (http://localhost:8000)
+# Start FastAPI development server
 uvicorn app.main:app --reload --port 8000
 ```
-API Documentation will be available at `http://localhost:8000/docs`.
-System and database health check is available at `http://localhost:8000/health`.
 
 ---
 
-## 5. Project Memory Documentation
+## 7. Project Memory & Governance Documentation
 
-The repository maintains strict operational documentation to ensure consistency across sessions and AI agent handoffs:
+ContractIQ enforces strict operational governance across all phases:
 
-1. [**`AGENTS.md`**](./AGENTS.md): Mandatory rules of engagement, 12 development rules, and session continuation order.
-2. [**`DECISIONS.md`**](./DECISIONS.md): Architectural decision records documenting what was decided, alternatives rejected, and undecided items.
-3. [**`FLOW.md`**](./FLOW.md): Step-by-step application flows and planned production data pipelines.
-4. [**`PHASE_STATUS.md`**](./PHASE_STATUS.md): Real-time phase status, verification log, and immediate next action.
+1. [**`AGENTS.md`**](./AGENTS.md): Mandatory rules of engagement, 12 development rules, and session continuation protocols.
+2. [**`DECISIONS.md`**](./DECISIONS.md): Comprehensive Architectural Decision Records (ADRs DEC-001 through DEC-045).
+3. [**`FLOW.md`**](./FLOW.md): Complete application flows, prompt injection defenses, observability, and production deployment topology.
+4. [**`PHASE_STATUS.md`**](./PHASE_STATUS.md): Roadmap tracking all 20 phases from baseline through production delivery.

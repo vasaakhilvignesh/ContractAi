@@ -397,10 +397,18 @@ Format for each record:
   5. **Cloud Probing & Health Diagnostics:** Enhanced `/health` with safe environment, model, and connectivity flags without secrets. Added dedicated `/health/liveness` (process responsiveness) and `/health/readiness` (database dependency readiness returning 200/503) probes for production infrastructure orchestration.
 - **Context:** Enterprise-grade deployment requires actionable latency observability and reliable performance diagnostics while strictly preserving secret isolation and data privacy.
 - **Why this decision was made:** Complex multi-step pipelines (dense vector search, FTS, RRF, LLM generation, citation verification) require discrete timing visibility to identify performance bottlenecks and monitor upstream provider reliability without incurring external infrastructure complexity.
-- **Alternatives considered:** Introducing distributed tracing frameworks (OpenTelemetry / Jaeger), Redis-based caching, external APM agents, or unbounded log streaming.
-- **Why alternatives were rejected:** OpenTelemetry / external APM agents introduce heavy third-party dependencies and significant maintenance overhead for a student-explainable architecture. Redis introduces additional stateful infrastructure violates Rule 2 & Rule 10 when PostgreSQL composite indexes and native Python timing adequately solve latency needs.
-- **Consequences / Trade-offs:** Zero external infrastructure dependencies introduced. All logs and errors remain strictly scrubbed and structured.
-- **Phase:** Phase 19A–19E
+### DEC-045: Production Deployment & Platform Hardening Architecture
+- **Decision:** Standardize production deployment across PaaS (Render / Railway), Serverless/Static Hosts (Vercel / Cloudflare Pages / Netlify), and Containerized Environments (Docker / Docker Compose):
+  1. **Production Configuration Invariants:** Implemented strict Pydantic `@model_validator` that refuses to boot in production (`APP_ENV=production`) if `JWT_SECRET_KEY` is the dev default or < 32 characters, if `DATABASE_URL` is unconfigured, or if `GEMINI_API_KEY` is missing. Automatically forces `APP_DEBUG=False` in production, disabling Swagger UI (`/docs`, `/redoc`) and SQL echoing.
+  2. **CORS Hardening:** Configured `cors_allowed_origins` based on `CORS_ORIGINS` environment variable in production, rejecting wildcard `*` with credentials and allowing only explicit frontend domains.
+  3. **Multi-Target Deployment Artifacts:** Provided lightweight containerization (`backend/Dockerfile` with non-root user and healthcheck), entrypoint migration script (`backend/start.sh`), declarative PaaS blueprint (`render.yaml`), Docker Compose (`docker-compose.prod.yml`), and static SPA client-side rewrite rules (`public/_redirects`, `vercel.json`).
+  4. **Database Migration Safety:** Production deployments execute `alembic upgrade head` before starting Uvicorn server processes. Schema migrations remain transactional and idempotent.
+- **Context:** Transitioning ContractIQ from local development to production requires guaranteed environment validation, CORS isolation, SPA client-side routing, and simple reproducibility.
+- **Why this decision was made:** Eliminates deployment mistakes (like booting with default dev JWT secrets or unmasked database errors) at validation time while keeping operational complexity low enough for a single student engineer to defend in an interview.
+- **Alternatives considered:** Complex Kubernetes Helm charts; separate microservices for frontend and backend; managed auth services.
+- **Why alternatives were rejected:** Over-engineering violates Rule 2, Rule 10, and Rule 11. The chosen architecture is fully portable across standard cloud providers.
+- **Consequences / Trade-offs:** In production mode, environment variables must be populated before application startup.
+- **Phase:** Phase 20A–20E
 - **Date:** 2026-09-14
 
 ---
@@ -414,7 +422,7 @@ Format for each record:
 The following architectural decisions have **not yet been made** or are partially resolved:
 
 ### DEC-011: LLM Provider for Extraction & Analysis
-- **Status:** **Resolved in Phase 6A (DEC-029):** Google Gemini (`gemini-2.5-flash` via official `google-genai` SDK) selected as the primary provider with `StructuredLLMProvider` abstraction.
+- **Status:** **Resolved in Phase 6A (DEC-029) & updated in Phase 18:** Google Gemini (`gemini-3.8-flash` via official `google-genai` SDK) selected as primary provider with `StructuredLLMProvider` abstraction.
 - **Remaining Open Question:** Secondary fallback provider (e.g. Claude 3.5 Sonnet or OpenAI GPT-4o-mini) if Gemini rate limits or availability requires redundancy.
 
 ### DEC-012: Post-Retrieval Reranking Architecture
@@ -427,16 +435,10 @@ The following architectural decisions have **not yet been made** or are partiall
 - **Status:** **Resolved across Phases 6A–6D (DEC-029, DEC-030, DEC-031, DEC-032):** Pydantic v2 schemas (`ChunkClauseExtractionResult`, `ClauseObligationExtractionResult`, `ClauseFactExtractionResult`) validated with Phase 6A infrastructure and Gemini JSON schema enforcement.
 
 ### DEC-014: Deterministic Risk Rule Architecture
-- **Status:** **Not decided yet.**
-- **Candidates:** Pure code-based rule engine (Python functions / TypeScript validators), JSON-based rule definitions, or domain rule engine.
-- **Design Principle:** LLM extracts structured facts (e.g., `notice_period_days: 15`); deterministic application code evaluates business rules (e.g., `if notice_period_days < 30 -> flag CRITICAL`). LLM does NOT guess risk level nondeterministically.
+- **Status:** **Resolved in Phase 8 (DEC-033):** Pure code-based deterministic rule engine with risk signal lineage.
 
 ### DEC-015: Authentication & Multi-Tenancy Strategy
-- **Status:** **Not decided yet.**
-- **Candidates:** Supabase Auth, Firebase Auth, Clerk, or JWT-based custom auth with PostgreSQL row-level security (RLS).
-- **Considerations:** Per-user/organization contract isolation and role-based access control (Procurement Lead, Legal, Admin).
+- **Status:** **Resolved in Phase 13A & Phase 18B (DEC-041, DEC-042):** Custom JWT authentication, cryptographic salted hashing, and universal tenant IDOR isolation.
 
 ### DEC-016: Production Deployment Architecture
-- **Status:** **Not decided yet.**
-- **Candidates:** Docker Compose on VPS, Vercel/Cloudflare Pages (frontend) + Cloud Run/Render (backend), Kubernetes.
-- **Considerations:** Cost-effectiveness, reproducibility, simplicity for evaluation.
+- **Status:** **Resolved in Phase 20 (DEC-045):** Multi-platform deployment (Render / Docker / Vercel) connecting to Neon PostgreSQL, environment-variable validation, non-root containerization, and SPA client-side rewrite rules.

@@ -93,15 +93,22 @@ def create_app() -> FastAPI:
     )
 
     # ----------------------------------------------------------------
-    # CORS — Development configuration.
-    # In production (Phase 5+), restrict allow_origins to the deployed
-    # frontend domain.
+    # CORS — Production & Development origin handling (Phase 20C)
+    # Never uses unrestricted wildcard allow_origins with credentials.
+    # In production, uses explicitly configured origins (CORS_ORIGINS).
+    # In development, permits local dev origins by default.
     # ----------------------------------------------------------------
+    cors_allowed_origins = (
+        settings.cors_origins_list
+        if settings.is_production
+        else (settings.cors_origins_list or ["http://localhost:5173", "http://localhost:3000", "http://localhost:8443"])
+    )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.app_debug else [],
+        allow_origins=cors_allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 

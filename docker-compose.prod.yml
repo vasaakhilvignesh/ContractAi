@@ -1,0 +1,28 @@
+﻿# ============================================================
+# ContractIQ — Production Docker Compose (Phase 20D)
+#
+# Runs the containerized backend with production environment
+# configuration connecting to the existing Neon PostgreSQL database.
+# ============================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: contractiq-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DATABASE_URL=
+      - GEMINI_API_KEY=
+      - JWT_SECRET_KEY=
+      - CORS_ORIGINS=
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/liveness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

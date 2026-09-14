@@ -8,17 +8,24 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 19: Performance & Observability (19A–19E)** |
+| **Current Phase** | **Phase 20: Production Deployment (20A–20E)** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 513ms), `npx tsc --noEmit` (0 errors); Backend: `test_observability.py` (17/17 passed), `python -m compileall` (0 errors); Alembic migration `f31920b7c102` applied to Neon DB; 0 secrets exposed |
-| **Last Git Commit** | `1e12b67` ("chore: update structured LLM model from gemini-2.5-flash to gemini-3.8-flash") |
+| **Last Verified State** | Frontend: `npm run build` (built in 267ms, `_redirects` verified), `npx tsc --noEmit` (0 errors); Backend: `test_production_config.py` (11/11 passed), `test_observability.py` (17/17 passed), `test_secret_scanner.py` (6/6 passed, 0 secrets), `python -m compileall` (0 errors); Alembic migration `f31920b7c102` applied to Neon DB; Dockerfile & Render Blueprint verified |
+| **Last Git Commit** | `14989e6` ("feat: implement performance and observability (Phase 19A-19E)") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 20: Production Deployment & System Packaging** |
-| **Exact Next Action** | Multi-service release packaging, containerization, and final submission artifacts. |
+| **Next Phase** | **Production Operations & Continuous Monitoring** |
+| **Exact Next Action** | Production release ready for cloud provisioning on Render / Docker / Vercel. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 20A–20E: Production Deployment & System Packaging** *(Completed)*
+  - [x] **20A — Backend Deployment:** FastAPI backend configured for production with Uvicorn ASGI; `backend/Dockerfile` using Python 3.13-slim with non-root user `appuser`, automated curl healthcheck against `/health/liveness`; `backend/start.sh` entrypoint script running `alembic upgrade head` before Uvicorn startup; live Neon PostgreSQL connectivity with serverless SSL pooled connection; environment-variable driven configuration without hardcoded secrets.
+  - [x] **20B — Frontend Deployment:** React 19 + Vite 8 SPA configured with dynamic API base URL (`VITE_API_BASE_URL` in `src/services/api.ts`); SPA client routing artifacts created (`public/_redirects` with `/* /index.html 200` and `vercel.json` rewrite configuration); verified production build emits all redirect assets to `dist/`.
+  - [x] **20C — Production Configuration & Security:** Pydantic `Settings` model validator enforces production invariants: rejects default development JWT secrets, enforces >= 32 character secret length, validates non-empty `DATABASE_URL` and `GEMINI_API_KEY`, forces `APP_DEBUG=False`, disables interactive Swagger `/docs` and `/redoc` in production; strict CORS policy rejecting wildcard `*` with credentials and binding to configured `CORS_ORIGINS`.
+  - [x] **20D — Multi-Target Deployment Artifacts:** Created `render.yaml` defining dual-service Infrastructure-as-Code Blueprint (`contractiq-api` web service and `contractiq-web` static site); created `docker-compose.prod.yml` for unified container orchestration; root `.env.example` and `backend/.env.example` updated with production variables.
+  - [x] **20E — Production Verification & Documentation:** Implemented 11 production configuration tests in `backend/tests/test_production_config.py` (100% pass); updated `DECISIONS.md` with DEC-045; updated `FLOW.md` with production deployment topology; updated `README.md` with production operations guide.
 
 - [x] **Phase 19A–19E: Performance & Observability** *(Completed)*
   - [x] **19A — Request & Latency Observability:** Added `RequestIDMiddleware` generating/propagating `X-Request-ID` across all requests; structured access log per response capturing method, route template, status code, and latency in ms (`time.perf_counter`); production JSON-line logging (`JSONLineFormatter`).

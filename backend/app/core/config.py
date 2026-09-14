@@ -12,7 +12,7 @@ Usage:
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 
 class Settings(BaseSettings):
@@ -70,16 +70,64 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60 * 24  # 24 hours default
 
+    # ----------------------------------------------------------------
+    # CORS & Production Origin Security (Phase 20C)
+    # ----------------------------------------------------------------
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:8443"
 
+    @model_validator(mode="after")
+    def validate_production_configuration(self) -> "Settings":
+        """
+        Enforces strict security invariants when APP_ENV=production:
+          1. jwt_secret_key must not be the insecure dev default and must be >= 32 chars.
+          2. database_url must be provided and non-empty.
+          3. gemini_api_key must be provided and non-empty.
+          4. app_debug is automatically forced to False in production.
+        """
+        if self.is_production:
+            insecure_defaults = {
+                "contractiq-dev-insecure-secret-key-change-in-production-32bytes",
+                "change-this-to-a-secure-random-secret-key-in-production",
+                "secret",
+                "changeme",
+                "password",
+            }
+            if (
+                not self.jwt_secret_key
+                or self.jwt_secret_key.strip() in insecure_defaults
+                or len(self.jwt_secret_key.strip()) < 32
+            ):
+                raise ValueError(
+                    "Production configuration error: JWT_SECRET_KEY must be set to a strong, "
+                    "non-default secret of at least 32 characters when APP_ENV=production."
+                )
 
-    @field_validator("database_url")
-    @classmethod
-    def database_url_must_not_be_empty_in_production(
-        cls, v: str, info: object
-    ) -> str:
-        # Allow empty string in development for scaffolding/test purposes.
-        # Production readiness check is done at startup in main.py.
-        return v
+            if not self.is_database_configured:
+                raise ValueError(
+                    "Production configuration error: DATABASE_URL must be configured when APP_ENV=production."
+                )
+
+            if not self.is_gemini_configured:
+                raise ValueError(
+                    "Production configuration error: GEMINI_API_KEY must be configured when APP_ENV=production."
+                )
+
+            if self.app_debug:
+                self.app_debug = False
+
+        return self
+
+    @property
+    def is_production(self) -> bool:
+        """Returns True if the application is configured for production."""
+        return self.app_env.lower() == "production"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Returns parsed list of allowed CORS origin strings."""
+        if not self.cors_origins:
+            return []
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
     def is_database_configured(self) -> bool:
