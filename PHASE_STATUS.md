@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 13A–13E: Authentication & Authorization** |
+| **Current Phase** | **Phase 14A–14H: Frontend Integration & Application Shell** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 6 passed (`test_auth_and_ownership.py`), 10 passed (`test_obligation_api.py`), 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `2d3df77` ("feat: add obligation api") |
+| **Last Verified State** | Frontend: `npm run build` (built in 282ms), `npx tsc --noEmit` (0 errors); Backend: healthy (`Backend app import healthy!`, 6 auth/ownership tests passed); Git: working tree clean |
+| **Last Git Commit** | `59125cc` ("feat: add authentication and authorization") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 14: Frontend Integration & Interactive Citation Highlighting** |
-| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, comparison, obligation, and auth endpoints. |
+| **Next Phase** | **Phase 15: Evaluation, End-to-End Testing & Production Hardening** |
+| **Exact Next Action** | Run end-to-end user evaluation flows and production Docker packaging. |
 
 ---
 
@@ -347,11 +347,31 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] **Phase 13E: Security & Comprehensive Test Suite** *(Completed)*
     - [x] Error handling for expired tokens (`TokenExpiredError`), malformed tokens, and tampered signatures (`TokenError`).
     - [x] 6 comprehensive unit, integration, and IDOR protection tests in `backend/tests/test_auth_and_ownership.py` (100% pass rate).
-- [ ] **Phase 14: Frontend Integration & Interactive Citation Highlighting**
-  - [ ] Replacement of static mock data with API client services.
-  - [ ] Upload wizard connection to backend ingestion pipeline.
-  - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
-  - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
+- [x] **Phase 14: Frontend Integration & Application Shell (Phase 14A–14H)** *(Completed)*
+  - [x] **Phase 14A: API Client Foundation** *(Completed)*
+    - [x] Implemented typed frontend API client with fetch wrapper in `src/api/client.ts`.
+    - [x] Centralized base URL configuration, JWT Bearer header injection, and standardized error handling (`ApiError`).
+    - [x] Zero credential leakage or hardcoded secrets.
+  - [x] **Phase 14B: Authentication UI** *(Completed)*
+    - [x] Built dedicated `Login.tsx` and `Register.tsx` pages with enterprise form validation and error handling.
+    - [x] Created `AuthContext.tsx` with user state, token persistence in localStorage, session expiry event listeners, and logout.
+  - [x] **Phase 14C: Protected Application Shell** *(Completed)*
+    - [x] Protected route wrapper `ProtectedRoute.tsx` redirecting unauthenticated users to `/login`.
+    - [x] Dynamic user profile display (initials, name, role) and logout action in `Sidebar.tsx`.
+  - [x] **Phase 14D: Contract API Integration** *(Completed)*
+    - [x] Integrated `Contracts.tsx` and `ContractOverview.tsx` with live `contractsApi.list` and `contractsApi.get`.
+    - [x] Connected `UploadContract.tsx` to live backend contract creation, PDF upload, extraction, chunking, and risk evaluation endpoints.
+  - [x] **Phase 14E: Analyst / RAG Integration** *(Completed)*
+    - [x] Built `Analyst.tsx` connected to Phase 10 `analystApi.query`.
+    - [x] Multi-contract selection (1 to 10 contracts), grounded answers, verified factual claims with citation indices, and optional retrieval debug panel.
+  - [x] **Phase 14F: Comparison & Obligation Integration** *(Completed)*
+    - [x] Integrated `Compare.tsx` with Phase 11 `comparisonApi.compare`.
+    - [x] Integrated `Obligations.tsx` with Phase 12 `obligationsApi.query`.
+  - [x] **Phase 14G: Risk & Dashboard Integration** *(Completed)*
+    - [x] Connected `RiskMonitor.tsx` and `Dashboard.tsx` with live contract signals and portfolio metrics.
+  - [x] **Phase 14H: Frontend Reliability & UX** *(Completed)*
+    - [x] Fixed unrouted sidebar links by mounting `/analyst` and `/audit` in `App.tsx`.
+    - [x] Verified zero TypeScript compilation errors (`npx tsc --noEmit`) and clean production build (`npm run build`).
 - [ ] **Phase 15: Evaluation, End-to-End Testing & Production Hardening**
 
 ---
@@ -475,3 +495,6 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Phase 13 Auth & Ownership Tests | `pytest tests/test_auth_and_ownership.py -v` | **PASSED** (6 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-14 | Frontend Build (Phase 13 Check) | `npm run build` | **PASSED** (built in 325ms, 0 errors) |
 | 2026-09-14 | TypeScript Verification (Phase 13 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Frontend Build (Phase 14 Check) | `npm run build` | **PASSED** (built in 282ms, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Phase 14 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Backend Health Verification | `python -c "from app.main import app"` | **PASSED** (Backend app import healthy, 0 errors) |

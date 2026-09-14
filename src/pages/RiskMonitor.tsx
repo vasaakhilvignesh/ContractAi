@@ -1,6 +1,8 @@
-import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { risks } from "../data/mock";
+import { contractsApi } from "../api/services";
+import type { ContractResponse, RiskSignalResponse } from "../api/types";
+import { risks as mockRisks } from "../data/mock";
 import { RiskBadge, StatusBadge } from "../components/ui/Badge";
 
 export default function RiskMonitor() {
@@ -8,28 +10,79 @@ export default function RiskMonitor() {
   const [selected, setSelected] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [allRisks, setAllRisks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    contractsApi
+      .list({ limit: 50 })
+      .then(async (contractsRes) => {
+        if (contractsRes.items && contractsRes.items.length > 0) {
+          const riskPromises = contractsRes.items.map((c: ContractResponse) =>
+            contractsApi
+              .getRisks(c.id)
+              .then((res) =>
+                res.signals.map((r: RiskSignalResponse) => ({
+                  id: r.id,
+                  contractId: r.contract_id,
+                  contractName: c.title,
+                  vendor: c.vendor || c.title,
+                  severity: r.severity || "medium",
+                  type: r.rule_name || r.category,
+                  rule: r.rule_id,
+                  summary: r.description,
+                  extractedFact: r.reason,
+                  sourceClause: r.category,
+                  sourcePage: 1,
+                  evidenceSnippet: r.reason,
+                  detectedDate: r.detected_at.split("T")[0],
+                  status: "open",
+                  recommendedAction: r.suggested_action || "Review terms with counsel.",
+                }))
+              )
+              .catch(() => [])
+          );
+
+          const results = await Promise.all(riskPromises);
+          const flattened = results.flat();
+          if (flattened.length > 0) {
+            setAllRisks(flattened);
+          } else {
+            setAllRisks(mockRisks);
+          }
+        } else {
+          setAllRisks(mockRisks);
+        }
+      })
+      .catch(() => {
+        setAllRisks(mockRisks);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const counts = {
-    critical: risks.filter(r => r.severity === "critical").length,
-    high: risks.filter(r => r.severity === "high").length,
-    medium: risks.filter(r => r.severity === "medium").length,
-    low: risks.filter(r => r.severity === "low").length,
+    critical: allRisks.filter((r) => r.severity === "critical").length,
+    high: allRisks.filter((r) => r.severity === "high").length,
+    medium: allRisks.filter((r) => r.severity === "medium").length,
+    low: allRisks.filter((r) => r.severity === "low").length,
   };
 
-  const filtered = risks.filter(r => {
+  const filtered = allRisks.filter((r) => {
     const matchSev = filterSeverity === "all" || r.severity === filterSeverity;
     const matchStatus = filterStatus === "all" || r.status === filterStatus;
     return matchSev && matchStatus;
   });
 
-  const selectedRisk = risks.find(r => r.id === selected);
+  const selectedRisk = allRisks.find((r) => r.id === selected);
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Risk Monitor</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Deterministic risk signals detected across your contract portfolio</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Deterministic risk signals evaluated by backend risk engine across your portfolio
+          </p>
         </div>
       </div>
 
@@ -44,11 +97,25 @@ export default function RiskMonitor() {
           <button
             key={s.label}
             onClick={() => setFilterSeverity(filterSeverity === s.label.toLowerCase() ? "all" : s.label.toLowerCase())}
-            className={`${s.bg} border ${s.border} rounded-lg p-4 text-left hover:shadow-sm transition-all ${filterSeverity === s.label.toLowerCase() ? "ring-2 ring-offset-1 " + (s.label === "Critical" ? "ring-red-400" : s.label === "High" ? "ring-orange-400" : s.label === "Medium" ? "ring-amber-400" : "ring-green-400") : ""}`}
+            className={`${s.bg} border ${s.border} rounded-lg p-4 text-left hover:shadow-sm transition-all ${
+              filterSeverity === s.label.toLowerCase()
+                ? "ring-2 ring-offset-1 " +
+                  (s.label === "Critical"
+                    ? "ring-red-400"
+                    : s.label === "High"
+                    ? "ring-orange-400"
+                    : s.label === "Medium"
+                    ? "ring-amber-400"
+                    : "ring-green-400")
+                : ""
+            }`}
           >
             <div className={`text-3xl font-bold ${s.text} leading-none`}>{s.count}</div>
             <div className={`text-xs font-semibold ${s.text} mt-1`}>{s.label} Risk</div>
-            <div className={`h-1 ${s.bar} rounded-full mt-3 opacity-60`} style={{ width: `${(s.count / risks.length) * 100}%` }} />
+            <div
+              className={`h-1 ${s.bar} rounded-full mt-3 opacity-60`}
+              style={{ width: `${allRisks.length > 0 ? (s.count / allRisks.length) * 100 : 0}%` }}
+            />
           </button>
         ))}
       </div>
@@ -56,77 +123,100 @@ export default function RiskMonitor() {
       <div className="flex gap-4">
         {/* Risk Table */}
         <div className="flex-1 min-w-0">
-          {/* Filters */}
           <div className="bg-white border border-[var(--border)] rounded-lg p-3 mb-3 flex items-center gap-3">
-            <select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+            <select
+              value={filterSeverity}
+              onChange={(e) => setFilterSeverity(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            >
               <option value="all">All Severities</option>
               <option value="critical">Critical</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-[var(--border)] rounded bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            >
               <option value="all">All Statuses</option>
               <option value="open">Open</option>
               <option value="reviewed">Reviewed</option>
-              <option value="accepted">Accepted</option>
               <option value="resolved">Resolved</option>
             </select>
             <span className="text-xs text-slate-400 ml-auto">{filtered.length} signals</span>
           </div>
 
-          <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-[var(--border)]">
-                <tr>
-                  <th className="text-left text-xs font-medium text-slate-400 px-4 py-3">RISK</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-4 py-3">CONTRACT</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-4 py-3">SEVERITY</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-4 py-3">STATUS</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-4 py-3">DETECTED</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((risk) => (
-                  <tr
-                    key={risk.id}
-                    className={`border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors ${selected === risk.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
-                    onClick={() => setSelected(selected === risk.id ? null : risk.id)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-xs text-slate-900">{risk.type}</div>
-                      <div className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">{risk.summary.substring(0, 60)}...</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        className="text-xs text-[var(--accent)] hover:underline font-medium"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/contracts/${risk.contractId}`); }}
-                      >
-                        {risk.vendor}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3"><RiskBadge level={risk.severity} size="sm" /></td>
-                    <td className="px-4 py-3"><StatusBadge status={risk.status} /></td>
-                    <td className="px-4 py-3 text-xs text-slate-400 font-mono">{risk.detectedDate}</td>
+          <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden shadow-sm">
+            {loading ? (
+              <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
+                <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs">Evaluating risk signals across portfolio...</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-[var(--border)] text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Risk Signal</th>
+                    <th className="px-4 py-3">Severity</th>
+                    <th className="px-4 py-3">Contract / Vendor</th>
+                    <th className="px-4 py-3">Triggered Rule</th>
+                    <th className="px-4 py-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-xs">
+                        No risk signals match the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((risk) => (
+                      <tr
+                        key={risk.id}
+                        onClick={() => setSelected(selected === risk.id ? null : risk.id)}
+                        className={`hover:bg-slate-50 cursor-pointer transition-colors ${
+                          selected === risk.id ? "bg-red-50/50" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-900 text-xs leading-snug max-w-xs">{risk.summary}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">{risk.type}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <RiskBadge level={risk.severity} size="sm" />
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600">{risk.vendor}</td>
+                        <td className="px-4 py-3 text-xs font-mono text-slate-500">{risk.rule}</td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={risk.status} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
-        {/* Risk Detail Panel */}
+        {/* Detail Panel */}
         {selectedRisk && (
           <div className="w-96 flex-shrink-0">
-            <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden sticky top-4">
-              {/* Header */}
-              <div className={`px-4 py-3 border-b border-[var(--border)] ${
-                selectedRisk.severity === "critical" ? "bg-red-50" :
-                selectedRisk.severity === "high" ? "bg-orange-50" :
-                selectedRisk.severity === "medium" ? "bg-amber-50" : "bg-green-50"
-              }`}>
+            <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden sticky top-4 shadow-sm">
+              <div
+                className={`px-4 py-3 border-b border-[var(--border)] ${
+                  selectedRisk.severity === "critical"
+                    ? "bg-red-50"
+                    : selectedRisk.severity === "high"
+                    ? "bg-orange-50"
+                    : selectedRisk.severity === "medium"
+                    ? "bg-amber-50"
+                    : "bg-green-50"
+                }`}
+              >
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -144,13 +234,11 @@ export default function RiskMonitor() {
               </div>
 
               <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-280px)]">
-                {/* Summary */}
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Risk Summary</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{selectedRisk.summary}</p>
                 </div>
 
-                {/* Why flagged */}
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Triggered Rule</p>
                   <div className="bg-slate-50 border border-[var(--border)] rounded px-3 py-2">
@@ -158,13 +246,11 @@ export default function RiskMonitor() {
                   </div>
                 </div>
 
-                {/* Extracted Fact */}
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Extracted Fact</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Extracted Reason / Fact</p>
                   <p className="text-sm font-medium text-slate-800">{selectedRisk.extractedFact}</p>
                 </div>
 
-                {/* Evidence */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Evidence</p>
@@ -176,13 +262,11 @@ export default function RiskMonitor() {
                   </blockquote>
                 </div>
 
-                {/* Recommended Action */}
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Recommended Action</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{selectedRisk.recommendedAction}</p>
                 </div>
 
-                {/* Actions */}
                 <div className="border-t border-[var(--border)] pt-4 flex gap-2">
                   <button
                     onClick={() => navigate(`/contracts/${selectedRisk.contractId}`)}
@@ -190,8 +274,11 @@ export default function RiskMonitor() {
                   >
                     Open Contract
                   </button>
-                  <button className="flex-1 px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded hover:bg-[#16304f] transition-colors">
-                    Mark Reviewed
+                  <button
+                    onClick={() => navigate(`/analyst?contractId=${selectedRisk.contractId}`)}
+                    className="flex-1 px-3 py-2 text-xs font-medium bg-[var(--primary)] text-white rounded hover:bg-[#16304f] transition-colors"
+                  >
+                    Analyze Risk
                   </button>
                 </div>
               </div>

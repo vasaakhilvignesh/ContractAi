@@ -1,8 +1,17 @@
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { contracts, risks, obligations } from "../data/mock";
+import { contractsApi } from "../api/services";
+import type { ContractResponse } from "../api/types";
+import { contracts as mockContracts, risks as mockRisks, obligations as mockObligations } from "../data/mock";
 import { RiskBadge, StatusBadge } from "../components/ui/Badge";
 
-function KpiCard({ label, value, secondary, accent, icon }: {
+function KpiCard({
+  label,
+  value,
+  secondary,
+  accent,
+  icon,
+}: {
   label: string;
   value: string;
   secondary: string;
@@ -18,12 +27,17 @@ function KpiCard({ label, value, secondary, accent, icon }: {
   return (
     <div className="bg-white border border-[var(--border)] rounded-lg p-5 flex flex-col gap-3 hover:shadow-sm transition-shadow">
       <div className="flex items-start justify-between">
-        <div className={`w-9 h-9 rounded flex items-center justify-center ${
-          accent === "red" ? "bg-red-50 text-red-600" :
-          accent === "amber" ? "bg-amber-50 text-amber-600" :
-          accent === "green" ? "bg-green-50 text-green-600" :
-          "bg-blue-50 text-blue-600"
-        }`}>
+        <div
+          className={`w-9 h-9 rounded flex items-center justify-center ${
+            accent === "red"
+              ? "bg-red-50 text-red-600"
+              : accent === "amber"
+              ? "bg-amber-50 text-amber-600"
+              : accent === "green"
+              ? "bg-green-50 text-green-600"
+              : "bg-blue-50 text-blue-600"
+          }`}
+        >
           {icon}
         </div>
         <div className={`w-1 h-8 rounded-full ${accentBar[accent ?? "blue"]}`} />
@@ -52,20 +66,56 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const highRiskContracts = contracts.filter(c => c.riskLevel === "critical" || c.riskLevel === "high");
-  const upcomingRenewals = contracts
-    .filter(c => c.status === "active")
+  const [contractsList, setContractsList] = useState<any[]>(mockContracts);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    contractsApi
+      .list({ limit: 100 })
+      .then((res) => {
+        if (res.items && res.items.length > 0) {
+          const mapped = res.items.map((c: ContractResponse) => ({
+            id: c.id,
+            name: c.title,
+            vendor: c.vendor || c.title,
+            type: c.contract_type || "General",
+            status: c.status || "active",
+            riskLevel: c.risk_level || "none",
+            renewalDate: c.expiry_date || "2026-12-31",
+            effectiveDate: c.effective_date || "2026-01-01",
+            expirationDate: c.expiry_date || "2026-12-31",
+            obligations: 0,
+            lastUpdated: c.updated_at ? c.updated_at.split("T")[0] : "—",
+            processingStatus: c.processing_status,
+            pages: c.page_count || 1,
+            value: c.contract_value ? `$${c.contract_value.toLocaleString()}` : "—",
+            noticePeriod: "30 days",
+          }));
+          setContractsList(mapped);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalCount = contractsList.length;
+  const highRiskContracts = contractsList.filter((c) => c.riskLevel === "critical" || c.riskLevel === "high");
+  const upcomingRenewals = contractsList
+    .filter((c) => c.status === "active")
     .sort((a, b) => new Date(a.renewalDate).getTime() - new Date(b.renewalDate).getTime())
     .slice(0, 4);
-  const recentContracts = [...contracts].sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()).slice(0, 5);
-  const openRisks = risks.filter(r => r.status === "open").slice(0, 4);
-  const dueObligations = obligations.filter(o => o.status === "due_soon" || o.status === "overdue").slice(0, 4);
+  const recentContracts = [...contractsList]
+    .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
+    .slice(0, 5);
+
+  const openRisks = mockRisks.filter((r) => r.status === "open").slice(0, 4);
+  const dueObligations = mockObligations.filter((o) => o.status === "due_soon" || o.status === "overdue").slice(0, 4);
 
   const riskDist = {
-    critical: risks.filter(r => r.severity === "critical").length,
-    high: risks.filter(r => r.severity === "high").length,
-    medium: risks.filter(r => r.severity === "medium").length,
-    low: risks.filter(r => r.severity === "low").length,
+    critical: contractsList.filter((c) => c.riskLevel === "critical").length,
+    high: contractsList.filter((c) => c.riskLevel === "high").length,
+    medium: contractsList.filter((c) => c.riskLevel === "medium").length,
+    low: contractsList.filter((c) => c.riskLevel === "low").length,
   };
   const totalRisks = riskDist.critical + riskDist.high + riskDist.medium + riskDist.low;
 
@@ -82,7 +132,9 @@ export default function Dashboard() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Contract Intelligence Overview</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Portfolio status as of January 10, 2024</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Active portfolio monitoring & deterministic risk intelligence
+          </p>
         </div>
         <button
           onClick={() => navigate("/contracts/upload")}
@@ -99,31 +151,51 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <KpiCard
           label="Total Contracts"
-          value="42"
-          secondary="3 added this month"
+          value={String(totalCount)}
+          secondary={`${contractsList.filter((c) => c.status === "active").length} currently active`}
           accent="blue"
-          icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L9 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 1v5h5" stroke="currentColor" strokeWidth="1.5"/></svg>}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M9 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6L9 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M9 1v5h5" stroke="currentColor" strokeWidth="1.5"/>
+            </svg>
+          }
         />
         <KpiCard
           label="Active Obligations"
-          value="86"
+          value={String(mockObligations.length)}
           secondary="12 due within 30 days"
           accent="green"
-          icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          }
         />
         <KpiCard
           label="High Risk Contracts"
-          value="7"
-          secondary="2 require immediate attention"
+          value={String(highRiskContracts.length)}
+          secondary="Flagged by deterministic rules"
           accent="red"
-          icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L1 13h14L8 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M8 6v3M8 11v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L1 13h14L8 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M8 6v3M8 11v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          }
         />
         <KpiCard
           label="Upcoming Renewals"
-          value="5"
-          secondary="Within the next 30 days"
+          value={String(upcomingRenewals.length)}
+          secondary="Review opt-out windows"
           accent="amber"
-          icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M8 4v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8 4v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          }
         />
       </div>
 
@@ -138,7 +210,7 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-[var(--border)]">
                   <th className="text-left text-xs font-medium text-slate-400 pb-2">CONTRACT</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2">TYPE</th>
+                  <th className="text-left text-xs font-medium text-slate-400 pb-2">VENDOR</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2">STATUS</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2">RISK</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2">RENEWAL</th>
@@ -151,44 +223,48 @@ export default function Dashboard() {
                     className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
                     onClick={() => navigate(`/contracts/${c.id}`)}
                   >
-                    <td className="py-2.5 pr-4">
-                      <div className="font-medium text-slate-900 text-xs">{c.name}</div>
-                      <div className="text-slate-400 text-xs">{c.vendor}</div>
+                    <td className="py-2.5 font-medium text-slate-900 text-xs truncate max-w-xs">{c.name}</td>
+                    <td className="py-2.5 text-xs text-slate-600">{c.vendor}</td>
+                    <td className="py-2.5">
+                      <StatusBadge status={c.status} />
                     </td>
-                    <td className="py-2.5 pr-4 text-xs text-slate-500">{c.type}</td>
-                    <td className="py-2.5 pr-4"><StatusBadge status={c.status} /></td>
-                    <td className="py-2.5 pr-4"><RiskBadge level={c.riskLevel} size="sm" /></td>
-                    <td className="py-2.5 text-xs text-slate-500 font-mono">{c.renewalDate}</td>
+                    <td className="py-2.5">
+                      <RiskBadge level={c.riskLevel} size="sm" />
+                    </td>
+                    <td className="py-2.5 text-xs font-mono text-slate-500">{c.renewalDate}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Open Risk Signals */}
+          {/* Critical & High Risk Alerts */}
           <div className="bg-white border border-[var(--border)] rounded-lg p-5">
-            <SectionHeader title="Open Risk Signals" action="View Risk Monitor" onAction={() => navigate("/risks")} />
+            <SectionHeader title="Open Risk Signals" action="View All" onAction={() => navigate("/risks")} />
             <div className="space-y-2.5">
-              {openRisks.map((risk) => (
+              {openRisks.map((r) => (
                 <div
-                  key={risk.id}
-                  className="flex items-start gap-3 p-3 rounded border border-[var(--border)] hover:bg-slate-50 cursor-pointer transition-colors"
+                  key={r.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-[var(--border)] hover:bg-slate-50 cursor-pointer transition-colors"
                   onClick={() => navigate("/risks")}
                 >
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                    risk.severity === "critical" ? "bg-red-500" :
-                    risk.severity === "high" ? "bg-orange-500" :
-                    risk.severity === "medium" ? "bg-amber-500" : "bg-green-500"
-                  }`} />
+                  <div
+                    className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                      r.severity === "critical"
+                        ? "bg-red-500"
+                        : r.severity === "high"
+                        ? "bg-orange-500"
+                        : "bg-amber-500"
+                    }`}
+                  />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-800">{risk.type}</span>
-                      <RiskBadge level={risk.severity} size="sm" />
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-semibold text-slate-900 truncate">{r.contractName}</span>
+                      <RiskBadge level={r.severity} size="sm" />
+                      <span className="text-[11px] text-slate-400 ml-auto font-mono">Page {r.sourcePage}</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">{risk.contractName}</p>
-                    <p className="text-xs text-slate-400 mt-0.5 truncate italic">"{risk.extractedFact}"</p>
+                    <p className="text-xs text-slate-600 leading-snug">{r.summary}</p>
                   </div>
-                  <span className="text-xs text-slate-400 flex-shrink-0">{risk.detectedDate}</span>
                 </div>
               ))}
             </div>
@@ -197,104 +273,57 @@ export default function Dashboard() {
 
         {/* Right column (1/3) */}
         <div className="space-y-4">
-          {/* Risk Distribution */}
+          {/* Upcoming Renewals */}
           <div className="bg-white border border-[var(--border)] rounded-lg p-5">
-            <SectionHeader title="Risk Distribution" action="View Monitor" onAction={() => navigate("/risks")} />
-            <div className="space-y-2.5">
-              {[
-                { label: "Critical", count: riskDist.critical, color: "bg-red-500", total: totalRisks },
-                { label: "High", count: riskDist.high, color: "bg-orange-500", total: totalRisks },
-                { label: "Medium", count: riskDist.medium, color: "bg-amber-500", total: totalRisks },
-                { label: "Low", count: riskDist.low, color: "bg-green-500", total: totalRisks },
-              ].map((r) => (
-                <div key={r.label}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-600 font-medium">{r.label}</span>
-                    <span className="text-slate-400 font-mono">{r.count}</span>
+            <SectionHeader title="Upcoming Renewals" action="View All" onAction={() => navigate("/contracts")} />
+            <div className="space-y-3">
+              {upcomingRenewals.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-0 hover:bg-slate-50 px-1 rounded cursor-pointer transition-colors"
+                  onClick={() => navigate(`/contracts/${c.id}`)}
+                >
+                  <div className="min-w-0 flex-1 mr-2">
+                    <div className="text-xs font-medium text-slate-900 truncate">{c.name}</div>
+                    <div className="text-[11px] text-slate-400">{c.vendor}</div>
                   </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${r.color} transition-all`}
-                      style={{ width: `${(r.count / r.total) * 100}%` }}
-                    />
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-xs font-mono font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      {daysTill(c.renewalDate)}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Upcoming Renewals */}
+          {/* Obligations Due Soon */}
           <div className="bg-white border border-[var(--border)] rounded-lg p-5">
-            <SectionHeader title="Upcoming Renewals" />
-            <div className="space-y-2">
-              {upcomingRenewals.map((c) => {
-                const days = daysTill(c.renewalDate);
-                const isUrgent = typeof days === "string" && days !== "Expired" && parseInt(days) <= 30;
-                return (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between p-2.5 rounded border border-[var(--border)] hover:bg-slate-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/contracts/${c.id}`)}
-                  >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-xs font-medium text-slate-800 truncate">{c.vendor}</p>
-                      <p className="text-xs text-slate-400">{c.renewalDate}</p>
-                    </div>
-                    <span className={`text-xs font-mono font-semibold flex-shrink-0 ${isUrgent ? "text-red-600" : "text-slate-500"}`}>
-                      {days}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Obligation Status */}
-          <div className="bg-white border border-[var(--border)] rounded-lg p-5">
-            <SectionHeader title="Obligations Requiring Action" action="View All" onAction={() => navigate("/obligations")} />
-            <div className="space-y-2">
-              {dueObligations.map((ob) => (
+            <SectionHeader title="Obligations Due Soon" action="View All" onAction={() => navigate("/obligations")} />
+            <div className="space-y-2.5">
+              {dueObligations.map((o) => (
                 <div
-                  key={ob.id}
+                  key={o.id}
                   className="p-2.5 rounded border border-[var(--border)] hover:bg-slate-50 cursor-pointer transition-colors"
                   onClick={() => navigate("/obligations")}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-medium text-slate-800 leading-snug line-clamp-2">{ob.description}</p>
-                    <StatusBadge status={ob.status} />
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-slate-800 truncate">{o.vendor}</span>
+                    <span
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase ${
+                        o.status === "overdue"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {o.status.replace("_", " ")}
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{ob.vendor} · Due {ob.dueDate}</p>
+                  <p className="text-xs text-slate-500 leading-snug">{o.description}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-4 bg-white border border-[var(--border)] rounded-lg p-5">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Quick Actions</p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: "Upload Contract", route: "/contracts/upload", accent: true },
-            { label: "View All Contracts", route: "/contracts" },
-            { label: "Risk Monitor", route: "/risks" },
-            { label: "Obligations", route: "/obligations" },
-            { label: "Compare Contracts", route: "/compare" },
-            { label: "AI Analyst", route: "/analyst" },
-          ].map((a) => (
-            <button
-              key={a.label}
-              onClick={() => navigate(a.route)}
-              className={`px-3.5 py-1.5 text-sm font-medium rounded border transition-colors ${
-                a.accent
-                  ? "bg-[var(--accent)] text-white border-[var(--accent)] hover:bg-blue-700"
-                  : "bg-white text-slate-700 border-[var(--border)] hover:bg-slate-50"
-              }`}
-            >
-              {a.label}
-            </button>
-          ))}
         </div>
       </div>
     </div>

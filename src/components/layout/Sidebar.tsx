@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   {
@@ -78,6 +79,16 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { user, logout } = useAuth();
+
+  const displayName = user?.full_name || user?.email?.split("@")[0] || "ContractIQ User";
+  const userRole = user?.role ? user.role.replace("_", " ") : "Member";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <aside className="w-60 flex-shrink-0 flex flex-col border-r border-[var(--border)] bg-[var(--primary)] h-full">
@@ -148,13 +159,17 @@ export function Sidebar() {
         ))}
         <div className="flex items-center gap-2.5 px-3 py-2 mt-1">
           <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-            SC
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-white text-xs font-medium truncate">Sarah Chen</div>
-            <div className="text-white/40 text-[10px] truncate">Procurement Lead</div>
+            <div className="text-white text-xs font-medium truncate">{displayName}</div>
+            <div className="text-white/40 text-[10px] truncate capitalize">{userRole}</div>
           </div>
-          <button className="text-white/40 hover:text-white/70 transition-colors flex-shrink-0">
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0 p-1"
+          >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>

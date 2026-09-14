@@ -15,20 +15,26 @@ This document details how **ContractIQ** operates today and how the complete, en
 [main.tsx]
    │
    ▼
-[App.tsx] (BrowserRouter + Routes)
+[App.tsx] (BrowserRouter + AuthProvider + Routes)
+   ├── [Login.tsx]             Route: /login
+   ├── [Register.tsx]          Route: /register
    │
-   ▼
-[Shell.tsx] (Global Layout Shell)
-   ├── [Sidebar.tsx]  (Navigation, Logo, Profile, Route links)
-   ├── [Header.tsx]   (Breadcrumbs, Global Search Input, Notifications Dropdown, Upload CTA)
-   └── <main> (<Outlet />)
-          ├── [Dashboard.tsx]         Route: / or /dashboard
-          ├── [Contracts.tsx]         Route: /contracts
-          ├── [UploadContract.tsx]    Route: /contracts/upload
-          ├── [ContractOverview.tsx]  Route: /contracts/:id
-          ├── [Obligations.tsx]       Route: /obligations
-          ├── [RiskMonitor.tsx]       Route: /risks
-          └── [Compare.tsx]           Route: /compare
+   └── [ProtectedRoute.tsx] (Auth gate: redirects unauthenticated to /login)
+          │
+          ▼
+       [Shell.tsx] (Global Workspace Layout)
+          ├── [Sidebar.tsx]  (Navigation, Logo, Profile, Route links, Logout)
+          ├── [Header.tsx]   (Breadcrumbs, Global Search Input, Notifications Dropdown, Upload CTA)
+          └── <main> (<Outlet />)
+                 ├── [Dashboard.tsx]         Route: / or /dashboard
+                 ├── [Contracts.tsx]         Route: /contracts
+                 ├── [UploadContract.tsx]    Route: /contracts/upload
+                 ├── [ContractOverview.tsx]  Route: /contracts/:id
+                 ├── [Obligations.tsx]       Route: /obligations
+                 ├── [RiskMonitor.tsx]       Route: /risks
+                 ├── [Compare.tsx]           Route: /compare
+                 ├── [Analyst.tsx]           Route: /analyst
+                 └── [Audit.tsx]             Route: /audit
 ```
 
 ---

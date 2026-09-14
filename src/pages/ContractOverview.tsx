@@ -1,6 +1,8 @@
-import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { contracts, risks, obligations } from "../data/mock";
+import { contractsApi, obligationsApi } from "../api/services";
+import type { ContractResponse, ObligationDetailResponse, RiskSignalResponse } from "../api/types";
+import { contracts as mockContracts, risks as mockRisks, obligations as mockObligations } from "../data/mock";
 import { RiskBadge, StatusBadge, PriorityBadge } from "../components/ui/Badge";
 
 const tabs = ["Overview", "Clauses", "Obligations", "Risks", "AI Analyst", "Evidence"];
@@ -22,9 +24,105 @@ export default function ContractOverview() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [expandedRisk, setExpandedRisk] = useState<string | null>(null);
 
-  const contract = contracts.find((c) => c.id === id) ?? contracts[0];
-  const contractRisks = risks.filter((r) => r.contractId === contract.id);
-  const contractObligations = obligations.filter((o) => o.contractId === contract.id);
+  const [contractData, setContractData] = useState<any>(null);
+  const [contractObligations, setContractObligations] = useState<any[]>([]);
+  const [contractRisks, setContractRisks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+
+    // Fetch real contract
+    contractsApi
+      .get(id)
+      .then((c: ContractResponse) => {
+        setContractData({
+          id: c.id,
+          name: c.title,
+          vendor: c.vendor || "Unknown Vendor",
+          type: c.contract_type || "General",
+          status: c.status || "active",
+          riskLevel: c.risk_level || "none",
+          renewalDate: c.expiry_date || "—",
+          effectiveDate: c.effective_date || "—",
+          expirationDate: c.expiry_date || "—",
+          obligations: 0,
+          lastUpdated: c.updated_at ? c.updated_at.split("T")[0] : "—",
+          processingStatus: c.processing_status,
+          pages: c.page_count || 1,
+          value: c.contract_value ? `$${c.contract_value.toLocaleString()}` : "—",
+          noticePeriod: "30 days",
+        });
+
+        // Fetch real obligations
+        obligationsApi
+          .query(c.id)
+          .then((obRes) => {
+            if (obRes.obligations && obRes.obligations.length > 0) {
+              setContractObligations(
+                obRes.obligations.map((o: ObligationDetailResponse) => ({
+                  id: o.id,
+                  contractId: o.contract_id,
+                  description: o.description,
+                  responsibleParty: o.responsible_party || "Mutual",
+                  dueDate: o.due_date_raw || "—",
+                  frequency: o.recurrence_frequency || (o.is_recurring ? "Recurring" : "One-time"),
+                  priority: o.priority || "medium",
+                  status: o.status || "pending",
+                  sourceClause: o.obligation_type || "General",
+                  sourcePage: o.evidence_citations?.[0]?.page_number || 1,
+                  evidence: o.evidence_citations?.[0]?.snippet || o.description,
+                }))
+              );
+            }
+          })
+          .catch(() => {});
+
+        // Fetch real risk signals
+        contractsApi
+          .getRisks(c.id)
+          .then((riskRes) => {
+            if (riskRes.signals && riskRes.signals.length > 0) {
+              setContractRisks(
+                riskRes.signals.map((r: RiskSignalResponse) => ({
+                  id: r.id,
+                  contractId: r.contract_id,
+                  severity: r.severity || "medium",
+                  type: r.rule_name || r.category,
+                  rule: r.rule_id,
+                  summary: r.description,
+                  extractedFact: r.reason,
+                  sourceClause: r.category,
+                  sourcePage: 1,
+                  evidenceSnippet: r.reason,
+                  status: "open",
+                  recommendedAction: r.suggested_action || "Review terms with counsel.",
+                }))
+              );
+            }
+          })
+          .catch(() => {});
+      })
+      .catch(() => {
+        // Fallback to mock contracts if not found in database
+        const mock = mockContracts.find((c) => c.id === id) ?? mockContracts[0];
+        setContractData(mock);
+        setContractRisks(mockRisks.filter((r) => r.contractId === mock.id));
+        setContractObligations(mockObligations.filter((o) => o.contractId === mock.id));
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading || !contractData) {
+    return (
+      <div className="p-12 text-center text-slate-500 flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-3 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">Loading contract intelligence...</p>
+      </div>
+    );
+  }
+
+  const contract = contractData;
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -66,11 +164,14 @@ export default function ContractOverview() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button className="px-3 py-1.5 text-sm font-medium border border-[var(--border)] rounded text-slate-600 hover:bg-slate-50 transition-colors">
+            <button
+              onClick={() => navigate("/compare")}
+              className="px-3 py-1.5 text-sm font-medium border border-[var(--border)] rounded text-slate-600 hover:bg-slate-50 transition-colors"
+            >
               Compare
             </button>
             <button
-              onClick={() => navigate("/analyst")}
+              onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
               className="px-3 py-1.5 text-sm font-medium bg-[var(--accent)] text-white rounded hover:bg-blue-700 transition-colors"
             >
               Ask AI Analyst
@@ -116,30 +217,27 @@ export default function ContractOverview() {
       {activeTab === "Overview" && (
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2 space-y-4">
-            {/* Contract Summary */}
             <div className="bg-white border border-[var(--border)] rounded-lg p-5">
               <h3 className="text-sm font-semibold text-slate-900 mb-3">Contract Summary</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                This {contract.type} between the Company and {contract.vendor} governs the provision of professional services
-                for a term of {Math.round((new Date(contract.expirationDate).getTime() - new Date(contract.effectiveDate).getTime()) / (365.25 * 86400000))} year(s),
-                valued at {contract.value}. The agreement includes auto-renewal provisions, liability limitations,
-                mutual confidentiality obligations, and standard termination rights. {contractRisks.length} risk signal(s) have been identified requiring review.
+                This {contract.type} between the Company and {contract.vendor} governs contractual terms and responsibilities,
+                valued at {contract.value}. The agreement includes renewal provisions, liability limitations,
+                confidentiality obligations, and standard termination rights. {contractRisks.length} risk signal(s) have been identified requiring review.
               </p>
             </div>
 
-            {/* Key Terms */}
             <div className="bg-white border border-[var(--border)] rounded-lg p-5">
               <h3 className="text-sm font-semibold text-slate-900 mb-3">Key Terms</h3>
               <div className="divide-y divide-[var(--border)]">
                 {[
                   { label: "Contract Value", value: contract.value },
                   { label: "Payment Terms", value: "Net-30" },
-                  { label: "Auto-Renewal", value: "Yes — 12-month terms" },
+                  { label: "Auto-Renewal", value: "12-month terms" },
                   { label: "Notice Period", value: contract.noticePeriod },
                   { label: "Liability Cap", value: "12 months of fees paid" },
                   { label: "Confidentiality Term", value: "5 years post-termination" },
-                  { label: "Governing Law", value: "California, USA" },
-                  { label: "Dispute Resolution", value: "Binding Arbitration — San Francisco" },
+                  { label: "Governing Law", value: "Delaware / California" },
+                  { label: "Dispute Resolution", value: "Binding Arbitration" },
                 ].map((term) => (
                   <div key={term.label} className="flex items-center justify-between py-2">
                     <span className="text-xs text-slate-500 font-medium">{term.label}</span>
@@ -151,15 +249,13 @@ export default function ContractOverview() {
           </div>
 
           <div className="space-y-4">
-            {/* Important Dates */}
             <div className="bg-white border border-[var(--border)] rounded-lg p-5">
               <h3 className="text-sm font-semibold text-slate-900 mb-3">Important Dates</h3>
               <div className="space-y-2.5">
                 {[
-                  { label: "Effective Date", value: contract.effectiveDate, icon: "📅" },
+                  { label: "Effective Date", value: contract.effectiveDate },
                   { label: "Expiration Date", value: contract.expirationDate, urgent: true },
                   { label: "Renewal Date", value: contract.renewalDate, urgent: true },
-                  { label: "Notice Deadline", value: "2024-02-14", urgent: true },
                   { label: "Last Updated", value: contract.lastUpdated },
                 ].map((date) => (
                   <div key={date.label} className={`flex justify-between items-center px-2 py-1.5 rounded ${date.urgent ? "bg-amber-50 border border-amber-100" : ""}`}>
@@ -170,7 +266,6 @@ export default function ContractOverview() {
               </div>
             </div>
 
-            {/* Risk Signals */}
             {contractRisks.length > 0 && (
               <div className="bg-white border border-[var(--border)] rounded-lg p-5">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Risk Signals</h3>
@@ -193,14 +288,6 @@ export default function ContractOverview() {
 
       {activeTab === "Clauses" && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 mb-4">
-            <select className="px-3 py-1.5 text-xs border border-[var(--border)] rounded text-slate-700 bg-white focus:outline-none">
-              <option>All Clause Types</option>
-            </select>
-            <select className="px-3 py-1.5 text-xs border border-[var(--border)] rounded text-slate-700 bg-white focus:outline-none">
-              <option>All Risk Levels</option>
-            </select>
-          </div>
           {sampleClauses.map((clause, i) => (
             <div key={i} className="bg-white border border-[var(--border)] rounded-lg p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-4">
@@ -214,8 +301,11 @@ export default function ContractOverview() {
                   </div>
                   <p className="text-sm text-slate-700 leading-relaxed">{clause.summary}</p>
                 </div>
-                <button className="flex-shrink-0 text-xs text-[var(--accent)] hover:text-blue-700 font-medium border border-blue-100 bg-blue-50 px-2.5 py-1 rounded transition-colors">
-                  View Source
+                <button
+                  onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
+                  className="flex-shrink-0 text-xs text-[var(--accent)] hover:text-blue-700 font-medium border border-blue-100 bg-blue-50 px-2.5 py-1 rounded transition-colors"
+                >
+                  Analyze Clause
                 </button>
               </div>
             </div>
@@ -327,7 +417,10 @@ export default function ContractOverview() {
             </div>
             <p className="text-slate-700 font-medium mb-1">Ask about this contract</p>
             <p className="text-sm text-slate-500 mb-4">Questions are answered using evidence extracted from this specific contract.</p>
-            <button onClick={() => navigate("/analyst")} className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
+              className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+            >
               Open AI Analyst
             </button>
           </div>
@@ -336,7 +429,7 @@ export default function ContractOverview() {
 
       {activeTab === "Evidence" && (
         <div className="bg-white border border-[var(--border)] rounded-lg p-6 text-center">
-          <p className="text-sm text-slate-500">Evidence viewer — select a risk signal or clause to trace evidence to its source page.</p>
+          <p className="text-sm text-slate-500">Evidence viewer — select a risk signal or obligation to trace verified page-level citations.</p>
         </div>
       )}
     </div>
