@@ -149,6 +149,14 @@ from app.schemas.obligation_api import (
     ObligationQueryResponse,
 )
 
+from app.schemas.auth import (
+    UserRegisterRequest,
+    UserLoginRequest,
+    TokenResponse,
+    UserResponse,
+    TokenPayload,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -256,4 +264,9 @@ __all__ = [
     "ObligationAnalysisSummary",
     "ObligationQueryRequest",
     "ObligationQueryResponse",
+    "UserRegisterRequest",
+    "UserLoginRequest",
+    "TokenResponse",
+    "UserResponse",
+    "TokenPayload",
 ]

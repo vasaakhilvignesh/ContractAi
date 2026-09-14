@@ -46,6 +46,11 @@ class User(Base):
         nullable=True,
         comment="Display name",
     )
+    hashed_password: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Cryptographically salted and hashed password",
+    )
     organization: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,

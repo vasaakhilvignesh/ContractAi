@@ -342,6 +342,14 @@ Format for each record:
 - **Why alternatives were rejected:** LLMs are non-deterministic and can hallucinate deadlines. Pure client-side filtering requires fetching all contract data to the browser, which creates performance and security concerns.
 - **Consequences / Trade-offs:** Derived analysis uses structured data already extracted. If dates or parties were absent in the contract text, the engine safely marks them as unspecified without guessing.
 - **Phase:** Phase 12A–12E
+### DEC-040: JWT Authentication & Per-User Contract Isolation
+- **Decision:** Implement stateless JWT access tokens signed with HMAC-SHA256 (`HS256`) and cryptographically salted password hashing using standard library PBKDF2-HMAC-SHA256 (600,000 rounds, 16-byte random salt). Store hashed passwords on the `User` model (`hashed_password`). Implement user registration (`POST /auth/register`), login (`POST /auth/login`), and authenticated profile retrieval (`GET /auth/me`). Add FastAPI auth dependency guards (`get_current_user`, `get_current_user_optional`, `verify_contract_access`) to enforce contract ownership (`Contract.uploaded_by == user.id`), preventing IDOR attacks on contracts and cascading child entities while granting administrative access across all records for `admin` role users. Public health endpoints remain unauthenticated.
+- **Context:** Enterprise multi-tenant operation requires strict access control, contract isolation, prevention of unauthorized cross-user reads/updates/deletes (IDOR), and secure credential storage without plaintext passwords or token leakage.
+- **Why this decision was made:** Using standard library PBKDF2-HMAC-SHA256 and HS256 JWT eliminates external library bloat (adhering strictly to Rule 2 of `AGENTS.md`) while providing high-grade NIST/OWASP-compliant resistance against brute-force attacks. Binding contracts to users via foreign key `uploaded_by` and validating access in both CRUD queries and service dependencies guarantees mathematical access segregation.
+- **Alternatives considered:** External authentication providers (Firebase/Auth0/Supabase Auth); Argon2-cffi / bcrypt C-extensions; session-based cookie cookies with database-backed session tables.
+- **Why alternatives were rejected:** External auth services introduce third-party cloud dependencies and latency. C-extension hashing libraries require external C compilers on Windows environments, creating deployment friction. Stateless JWTs avoid database roundtrips for token validation while keeping horizontal scaling straightforward.
+- **Consequences / Trade-offs:** Revoking active JWTs before natural expiration requires token blocklisting or rotating the secret key.
+- **Phase:** Phase 13A–13E
 - **Date:** 2026-09-14
 
 ---

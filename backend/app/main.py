@@ -25,6 +25,7 @@ from app.api.v1.contracts import router as contracts_router
 from app.api.v1.analyst import router as analyst_router
 from app.api.v1.comparison import router as comparison_router
 from app.api.v1.obligations import router as obligations_router
+from app.api.v1.auth import router as auth_router
 
 
 # ====================================================================
@@ -111,6 +112,8 @@ def _register_routes(app: FastAPI) -> None:
 
     # Register domain routers
     # Note: comparison_router and obligations_router must precede contracts_router generic routes
+    app.include_router(auth_router)
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(comparison_router)
     app.include_router(comparison_router, prefix="/api/v1")
     app.include_router(obligations_router)

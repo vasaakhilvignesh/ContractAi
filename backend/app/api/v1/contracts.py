@@ -100,6 +100,8 @@ from app.services.structured_output_validator import (
     StructuredOutputError,
     StructuredOutputConfigurationError,
 )
+from app.core.auth import get_current_user_optional, verify_contract_access
+from app.models.user import User
 
 
 
@@ -116,9 +118,13 @@ router = APIRouter(prefix="/contracts", tags=["Contracts"])
 )
 def create_contract(
     contract_in: ContractCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractResponse:
     """Create a new contract."""
+    # Automatically associate with current user if authenticated and not explicitly set
+    if current_user is not None and contract_in.uploaded_by is None:
+        contract_in.uploaded_by = current_user.id
     return contract_service.create_contract(db=db, contract_in=contract_in)
 
 
@@ -136,6 +142,7 @@ def list_contracts(
     vendor: Optional[str] = Query(None, description="Filter by vendor name substring"),
     contract_type: Optional[str] = Query(None, description="Filter by contract type"),
     risk_level: Optional[str] = Query(None, description="Filter by aggregate risk level"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractListResponse:
     """List contracts with pagination and basic filtering."""
@@ -148,6 +155,11 @@ def list_contracts(
         contract_type=contract_type,
         risk_level=risk_level,
     )
+    # If user is authenticated and not admin, filter list to only accessible contracts
+    if current_user is not None and current_user.role != "admin":
+        items = [c for c in items if c.uploaded_by is None or c.uploaded_by == current_user.id]
+        total = len(items)
+
     return ContractListResponse(
         items=items,
         total=total,
@@ -165,6 +177,7 @@ def list_contracts(
 )
 def get_contract(
     contract_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractResponse:
     """Get a contract by UUID."""
@@ -174,6 +187,7 @@ def get_contract(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(contract, current_user)
     return contract
 
 
@@ -187,6 +201,7 @@ def get_contract(
 def update_contract(
     contract_id: uuid.UUID,
     contract_in: ContractUpdate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractResponse:
     """Partially update an existing contract."""
@@ -196,6 +211,7 @@ def update_contract(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
     return contract_service.update_contract(
         db=db,
         db_contract=db_contract,
@@ -211,6 +227,7 @@ def update_contract(
 )
 def delete_contract(
     contract_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a contract."""
@@ -220,6 +237,7 @@ def delete_contract(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
     contract_service.delete_contract(db=db, db_contract=db_contract)
 
 

@@ -201,6 +201,21 @@ from app.services.obligation_service import (
     get_single_obligation_detail,
 )
 
+from app.services.auth_service import (
+    AuthServiceError,
+    UserAlreadyExistsError,
+    InvalidCredentialsError,
+    InactiveUserError,
+    TokenError,
+    TokenExpiredError,
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_access_token,
+    register_user,
+    authenticate_user,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -328,4 +343,16 @@ __all__ = [
     "resolve_obligation_lineage",
     "query_contract_obligations",
     "get_single_obligation_detail",
+    "AuthServiceError",
+    "UserAlreadyExistsError",
+    "InvalidCredentialsError",
+    "InactiveUserError",
+    "TokenError",
+    "TokenExpiredError",
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "decode_access_token",
+    "register_user",
+    "authenticate_user",
 ]

@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-2.5-flash"
     llm_temperature: float = 0.0
 
+    # ----------------------------------------------------------------
+    # Authentication & Security (Phase 13A)
+    # ----------------------------------------------------------------
+    jwt_secret_key: str = "contractiq-dev-insecure-secret-key-change-in-production-32bytes"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 60 * 24  # 24 hours default
+
 
 
     @field_validator("database_url")

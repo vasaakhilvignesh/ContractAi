@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 12A–12E: Obligation API & Analysis** |
+| **Current Phase** | **Phase 13A–13E: Authentication & Authorization** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 10 passed (`test_obligation_api.py`), 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `551e6f8` ("feat: add contract comparison api") |
+| **Last Verified State** | Backend: 6 passed (`test_auth_and_ownership.py`), 10 passed (`test_obligation_api.py`), 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `2d3df77` ("feat: add obligation api") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 13: Frontend Integration & Interactive Citation Highlighting** |
-| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, comparison, and obligation endpoints. |
+| **Next Phase** | **Phase 14: Frontend Integration & Interactive Citation Highlighting** |
+| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, comparison, obligation, and auth endpoints. |
 
 ---
 
@@ -326,12 +326,33 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] REST API endpoints: `GET /contracts/{contract_id}/obligations/query`, `POST /contracts/{contract_id}/obligations/query`, and `GET /contracts/{contract_id}/obligations/{obligation_id}` (with `/api/v1` aliases).
     - [x] Strict contract scoping enforcement: nonexistent contracts return 404, cross-contract obligation access returns 404.
     - [x] 10 comprehensive unit, integration, and API tests in `backend/tests/test_obligation_api.py` (100% pass rate).
-- [ ] **Phase 13: Frontend Integration & Interactive Citation Highlighting**
+- [x] **Phase 13: Authentication & Authorization (Phase 13A–13E)** *(Completed)*
+  - [x] **Phase 13A: Authentication Foundation** *(Completed)*
+    - [x] Stateless JWT access tokens signed with HMAC-SHA256 (`HS256`).
+    - [x] Cryptographically salted password hashing using standard library PBKDF2-HMAC-SHA256 (600,000 rounds, 16-byte random salt).
+    - [x] Strongly typed Pydantic v2 schemas (`UserRegisterRequest`, `UserLoginRequest`, `TokenResponse`, `UserResponse`, `TokenPayload`).
+    - [x] Zero plain-text credentials stored or exposed in logs/responses. Safe `.env.example` templates.
+  - [x] **Phase 13B: User & Account Management** *(Completed)*
+    - [x] Alembic migration `e911249325b6_add_hashed_password_to_users` applied to live Neon database with verified reversibility.
+    - [x] User registration (`POST /auth/register`) with duplicate email detection (HTTP 409 Conflict).
+    - [x] User login (`POST /auth/login`) with credential verification (HTTP 401 Unauthorized).
+  - [x] **Phase 13C: Authorization & Ownership Enforcement** *(Completed)*
+    - [x] FastAPI dependencies `get_current_user` and `get_current_user_optional` for Bearer token extraction and claim verification.
+    - [x] Deterministic ownership verification guard `verify_contract_access` enforcing `Contract.uploaded_by == user.id` (IDOR prevention, HTTP 403 Forbidden).
+    - [x] Full administrative bypass for `admin` role across all contracts.
+  - [x] **Phase 13D: Protected API Surface** *(Completed)*
+    - [x] Contract CRUD routes integrated with user association and ownership verification.
+    - [x] User profile endpoint `GET /auth/me` returning sanitized public profile.
+    - [x] Public health endpoint `GET /health` remains unauthenticated.
+  - [x] **Phase 13E: Security & Comprehensive Test Suite** *(Completed)*
+    - [x] Error handling for expired tokens (`TokenExpiredError`), malformed tokens, and tampered signatures (`TokenError`).
+    - [x] 6 comprehensive unit, integration, and IDOR protection tests in `backend/tests/test_auth_and_ownership.py` (100% pass rate).
+- [ ] **Phase 14: Frontend Integration & Interactive Citation Highlighting**
   - [ ] Replacement of static mock data with API client services.
   - [ ] Upload wizard connection to backend ingestion pipeline.
   - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
   - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 14: Authentication, Evaluation, Testing & Production Hardening**
+- [ ] **Phase 15: Evaluation, End-to-End Testing & Production Hardening**
 
 ---
 
@@ -449,3 +470,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Phase 12 Obligation API Tests | `pytest tests/test_obligation_api.py -v` | **PASSED** (10 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-14 | Frontend Build (Phase 12 Check) | `npm run build` | **PASSED** (built in 1.77s, 0 errors) |
 | 2026-09-14 | TypeScript Verification (Phase 12 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Phase 13B Alembic Migration | `alembic upgrade head` | **PASSED** (applied revision `e911249325b6_add_hashed_password_to_users`) |
+| 2026-09-14 | Phase 13B Alembic Downgrade Reversibility | `alembic downgrade -1` & `upgrade head` | **PASSED** (reversibility verified on live Neon PostgreSQL) |
+| 2026-09-14 | Phase 13 Auth & Ownership Tests | `pytest tests/test_auth_and_ownership.py -v` | **PASSED** (6 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-14 | Frontend Build (Phase 13 Check) | `npm run build` | **PASSED** (built in 325ms, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Phase 13 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
