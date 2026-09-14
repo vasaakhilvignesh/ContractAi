@@ -378,7 +378,18 @@ Format for each record:
 - **Phase:** Phase 18A–18E
 - **Date:** 2026-09-14
 
+### DEC-043: Automated Secret Scanning & Key Remediation Protocol
+- **Decision:** Implement a deterministic repository secret scanner (`app.core.secret_scanner`) and automated regression test suite (`tests/test_secret_scanner.py`) to enforce zero-secret commitments into version control. Purged the exposed Google API key from commit `557b9ae` via Git history rewrite (`git commit --amend`), replaced test fixtures with dynamic synthetic string constructors, and verified complete exclusion of `.env` files. Mandate developer key rotation for any exposed credential.
+- **Context:** Following Phase 18 hardening, an exposed Google API key in unit test mock assertions was flagged by GitHub Secret Scanning. Immediate remediation required purging the secret from Git history, replacing static strings with synthetic mock constructs, adding pre-commit/test secret scanning, and marking the old key as compromised.
+- **Why this decision was made:** Automated secret detection prevents accidental leaks of third-party API keys, JWT secrets, database connection strings, or private keys before commits are pushed to remotes. Rewriting the single affected commit ensures the secret is eliminated from reachable branch history.
+- **Alternatives considered:** Simply adding a follow-up commit without rewriting history; relying entirely on external pre-commit hooks or GitHub remote scanners.
+- **Why alternatives were rejected:** Leaving the secret in Git history leaves it reachable and vulnerable, keeping security alerts open. Remote scanners detect leaks after they occur rather than preventing them locally.
+- **Consequences / Trade-offs:** Git history tip was amended; the exposed Google API key must be revoked and rotated in Google AI Studio / Cloud Console.
+- **Phase:** Phase 18 Recovery
+- **Date:** 2026-09-14
+
 ---
+
 
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

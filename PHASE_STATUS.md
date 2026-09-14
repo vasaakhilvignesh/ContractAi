@@ -8,10 +8,10 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 18A–18E: Security & Reliability Hardening** |
+| **Current Phase** | **Phase 18A–18E: Security & Reliability Hardening (Remediated & Hardened)** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 478ms), `npx tsc --noEmit` (0 errors); Backend: `test_security_and_reliability.py` (18/18 passed), Core regression suite (42/42 passed); Git: working tree clean and ready |
-| **Last Git Commit** | `11bbc67` ("feat: add rag evaluation and quality benchmarks") |
+| **Last Verified State** | Frontend: `npm run build` (built in 536ms), `npx tsc --noEmit` (0 errors); Backend: `test_security_and_reliability.py` (18/18 passed), `test_secret_scanner.py` (6/6 passed); Secret scans: 0 secrets in repo or reachable git history |
+| **Last Git Commit** | `48e8b66` ("feat: harden security and reliability (Phase 18A-18E)") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
 | **Next Phase** | **Phase 19: Production Dockerization, Deployment & System Verification** |
 | **Exact Next Action** | Production docker compose setup, multi-service configuration, and end-to-end release packaging. |
@@ -19,6 +19,12 @@ This document tracks the active phase, completed milestones, blockers, and immed
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 18 Security Remediation & Secret Scanner Hardening** *(Completed)*
+  - [x] **Secret Exposure Remediation:** Located exposed Google API key fixture in test suite; replaced with dynamic synthetic token constructors (`mock_gemini_key = "AIza" + ("SyntheticKeyForMaskTesting" * 2)[:35]`); purged literal string from all tracked code.
+  - [x] **Git History Purge:** Rewrote affected commit tip via `git commit --amend`, ensuring zero occurrences of the key exist across all 50 commits in reachable Git history.
+  - [x] **Lightweight Secret Scanner:** Implemented `backend/app/core/secret_scanner.py` detecting Google/Gemini API keys, private keys, database credentials, AWS access keys, and bearer JWTs; safe reporting never echoes secret values; verified git ignore status for `.env` files.
+  - [x] **Automated Secret Regression Suite:** Implemented `backend/tests/test_secret_scanner.py` (6/6 tests passing) verifying safe placeholders pass, unmarked credentials flag alerts, Google API patterns are caught, repository contains no secrets, `.env` files remain ignored, and no secrets are printed in output.
 
 - [x] **Phase 18A–18E: Security & Reliability Hardening** *(Completed)*
   - [x] **18A — Prompt Injection Protection:** Hardened Grounded RAG & Analyst prompt builders; wrapped retrieved contract chunks in `<untrusted_contract_text chunk_id="{id}" page="{page}">` XML tags with explicit negative directives prohibiting execution of instructions embedded within contracts; preserved 100% exact substring citation verification.
@@ -535,4 +541,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Core RAG & API Regression Suite | `pytest tests/test_grounded_rag.py tests/test_analyst_api.py tests/test_comparison_api.py tests/test_obligation_api.py tests/test_auth_and_ownership.py -v` | **PASSED** (42 passed, 0 skipped, 100% pass rate) |
 | 2026-09-14 | Frontend Production Build (Phase 18 Check) | `npm run build` | **PASSED** (built in 478ms, 0 errors) |
 | 2026-09-14 | TypeScript Verification (Phase 18 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
-
+| 2026-09-14 | Phase 18 Git History Purge Verification | `scan_history.py` across all reachable commits | **PASSED** (0 secret pattern matches found in git history) |
+| 2026-09-14 | Secret Scanner Regression Suite | `pytest tests/test_secret_scanner.py -v` | **PASSED** (6 passed, 0 skipped, 100% pass rate) |
+| 2026-09-14 | Repository Tracked Secret Scan | `python app/core/secret_scanner.py` | **PASSED** (0 secrets detected in repository tracked files) |
+| 2026-09-14 | Frontend Production Build (Remediation Check) | `npm run build` | **PASSED** (built in 536ms, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Remediation Check) | `npx tsc --noEmit` | **PASSED** (0 errors)

@@ -594,14 +594,14 @@ class TestReliabilityAndSecretMasking:
         mock_gemini_key = "AIza" + ("SyntheticKeyForMaskTesting" * 2)[:35]
         raw_error = (
             "Database connection failed connecting to "
-            "postgresql+psycopg2://contractiq_user:SuperSecretNeonPass123!@ep-cool-db.aws.neon.tech/contractiq_db?sslmode=require. "
+            "postgresql+psycopg2://mock_user:MockSecretPass123!@mock-db.aws.neon.tech/contractiq_db?sslmode=require. "
             f"Gemini request with key {mock_gemini_key} failed. "
             "Authorization was Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.fakeSignature."
         )
 
         masked = mask_secrets(raw_error)
 
-        assert "SuperSecretNeonPass123!" not in masked
+        assert "MockSecretPass123!" not in masked
         assert mock_gemini_key not in masked
         assert "[REDACTED]" in masked or "[REDACTED_DB_URL]" in masked
         assert "[REDACTED_GEMINI_KEY]" in masked
@@ -620,9 +620,9 @@ class TestReliabilityAndSecretMasking:
         # Query a non-existent contract with mock error containing sensitive database URL
         with patch("app.services.contract_service.get_contract") as mock_get:
             mock_get.side_effect = Exception(
-                "Internal DB error on postgresql://admin:secretPass999@localhost:5432/contracts"
+                "Internal DB error on postgresql://mock_admin:mockSecretPass999@localhost:5432/contracts"
             )
             response = client.get(f"/contracts/{uuid.uuid4()}")
             assert response.status_code == 500
-            assert "secretPass999" not in response.text
-            assert "[REDACTED]" in response.text or "secretPass999" not in response.json()["detail"]
+            assert "mockSecretPass999" not in response.text
+            assert "[REDACTED]" in response.text or "mockSecretPass999" not in response.json()["detail"]
