@@ -352,6 +352,21 @@ Format for each record:
 - **Phase:** Phase 13A–13E
 - **Date:** 2026-09-14
 
+### DEC-041: Grounded RAG Quality Evaluation & Invariant Thresholds
+- **Decision:** Implement an offline, deterministic evaluation suite (`app.evaluation.grounded_evaluator`) and quality metric framework (`app.evaluation.metrics`) measuring groundedness, citation validity, claim completeness, and cross-contract isolation. Store a version-controlled benchmark dataset in JSON (`grounded_eval_dataset.json`) containing 16 benchmark cases across 3 realistic agreements (Enterprise Cloud MSA `c1`, Apex SaaS Agreement `c2`, Empty Logistics Agreement `c3`). Enforce zero-tolerance production invariants:
+  - Wrong-Contract Citation Acceptance: 0.0%
+  - Hallucinated Chunk Citation Acceptance: 0.0%
+  - Verbatim Text Mismatch Rejection: 100.0%
+  - Insufficient-Evidence Detection Rate: 100.0%
+  Evaluate 13 explicit failure modes deterministically via `MockEvalStructuredLLMProvider` and orthogonal embeddings with zero external Gemini API calls and zero billing dependencies. Export comprehensive machine-readable JSON reports and human-readable Markdown evaluation summaries.
+- **Context:** Phase 17 requires systematic, reproducible verification of RAG quality, hallucination prevention, and failure-case recovery before production hardening and deployment.
+- **Why this decision was made:** LLMs in production risk subtle hallucinations (e.g. citing chunks from wrong contracts, misquoting terms, or generating confident answers when context is lacking). Deterministic evaluation provides automated regression gating in CI/CD without live LLM non-determinism, token costs, or rate limits. Enforcing zero tolerance on wrong-contract citations and hallucinated chunk IDs guarantees legal auditability and safety.
+- **Alternatives considered:** Live LLM-as-a-judge (RAGAS, TruLens, DeepEval); manual spot checks; reliance solely on unit tests.
+- **Why alternatives were rejected:** LLM-as-a-judge approaches introduce non-deterministic judge scoring, high token costs, and vendor API rate limit failures in automated CI pipelines. Manual spot checks provide no regression protection.
+- **Consequences / Trade-offs:** Evaluation assesses grounded extraction and citation validation against fixed benchmark ground truths; extending evaluation to novel legal clauses requires adding curated cases to the benchmark dataset.
+- **Phase:** Phase 17A–17E
+- **Date:** 2026-09-14
+
 ---
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)

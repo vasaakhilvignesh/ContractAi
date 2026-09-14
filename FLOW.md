@@ -364,3 +364,40 @@ Risk Signals Generated (Database Record)
 Dashboard & Risk Monitor UI
    (Procurement team views actionable, auditable risk flags with full evidence lineage)
 ```
+
+---
+
+### 5. RAG Evaluation & Invariant Benchmarking Pipeline (Phase 17)
+
+ContractIQ uses a deterministic, offline regression evaluation framework (`app.evaluation`) to safeguard against hallucinations, wrong-contract bleeding, and retrieval failures:
+
+```
+Version-Controlled Benchmark Dataset (grounded_eval_dataset.json)
+├── 3 Real-World Enterprise Contracts (Cloud MSA, SaaS Agreement, Logistics Archive)
+└── 16 Curated Grounding Benchmark Cases (Valid claims, Comparisons, 13 Failure Modes)
+   │
+   ▼
+MockEvalStructuredLLMProvider & Orthogonal Embeddings (Zero Gemini API Calls / Cost)
+   │
+   ▼
+Execution via Analyst / Grounded RAG Pipeline (Single & Multi-Contract)
+   ├── Context Construction & Bounding
+   ├── Hybrid RRF Retrieval (Vector + Keyword)
+   ├── Claim Extraction & Citation Resolution
+   └── Deterministic Lineage & Verbatim Verification
+   │
+   ▼
+Evaluation Metrics & Invariant Gatekeeper
+   ├── Claim Groundedness Rate (% of claims with verified evidence)
+   ├── Citation Validity Rate (% citations matching chunk, page & verbatim text)
+   ├── Critical Invariant Assertions:
+   │   ├── Wrong-Contract Citations == 0.0%
+   │   ├── Hallucinated Chunk IDs == 0.0%
+   │   ├── Text Mismatch Rejections == 100.0%
+   │   └── Insufficient Evidence Detections == 100.0%
+   │
+   ▼
+Audit Reports Generated
+   ├── Machine-Readable JSON Report (.to_json())
+   └── Human-Readable Markdown Audit Report (.format_markdown_report())
+```

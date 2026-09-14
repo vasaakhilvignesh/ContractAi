@@ -150,14 +150,143 @@ def aggregate_metrics(
     if not query_metrics:
         return {}
 
-    all_keys = list(query_metrics[0].keys())
-    aggregated: dict[str, float] = {}
-
-    for key in all_keys:
-        values = [qm[key] for qm in query_metrics if key in qm]
-        if values:
-            aggregated[key] = round(sum(values) / len(values), 6)
-        else:
-            aggregated[key] = 0.0
+    keys = query_metrics[0].keys()
+    aggregated = {}
+    for key in keys:
+        values = [qm.get(key, 0.0) for qm in query_metrics]
+        aggregated[key] = round(sum(values) / float(len(values)), 6)
 
     return aggregated
+
+
+# ====================================================================
+# Grounded Generation & Citation Metrics (Phase 17B & 17C)
+# ====================================================================
+
+def claim_groundedness_rate(claims: list[Any]) -> float:
+    """
+    Computes Claim Groundedness Rate:
+        CGR = (Number of Grounded Claims) / (Total Claims)
+    A claim is grounded if it has at least one valid supporting citation.
+    Returns 1.0 if total claims is 0 (vacuously true / no claims made).
+    """
+    if not claims:
+        return 1.0
+
+    grounded_count = 0
+    for claim in claims:
+        is_grounded = getattr(claim, "is_grounded", None)
+        if is_grounded is None and isinstance(claim, dict):
+            is_grounded = claim.get("is_grounded", False)
+        if bool(is_grounded):
+            grounded_count += 1
+
+    return round(grounded_count / float(len(claims)), 6)
+
+
+def citation_validity_rate(citations: list[Any]) -> float:
+    """
+    Computes Citation Validity Rate:
+        CVR = (Number of Valid Citations) / (Total Citations)
+    Returns 1.0 if total citations is 0.
+    """
+    if not citations:
+        return 1.0
+
+    valid_count = 0
+    for cite in citations:
+        status = getattr(cite, "verification_status", None)
+        if status is None and isinstance(cite, dict):
+            status = cite.get("verification_status")
+        status_val = getattr(status, "value", str(status)) if status is not None else ""
+        if status_val.lower() == "valid":
+            valid_count += 1
+
+    return round(valid_count / float(len(citations)), 6)
+
+
+def citation_completeness_rate(claims: list[Any]) -> float:
+    """
+    Computes Citation Completeness Rate:
+        CCR = (Number of Claims with >= 1 Citation) / (Total Claims)
+    Returns 1.0 if total claims is 0.
+    """
+    if not claims:
+        return 1.0
+
+    cited_count = 0
+    for claim in claims:
+        citations = getattr(claim, "citations", None)
+        if citations is None and isinstance(claim, dict):
+            citations = claim.get("citations", [])
+        if citations and len(citations) > 0:
+            cited_count += 1
+
+    return round(cited_count / float(len(claims)), 6)
+
+
+def citation_error_rate(citations: list[Any], target_error: str) -> float:
+    """
+    Computes the occurrence rate of a specific citation error status
+    (e.g., 'wrong_contract', 'chunk_not_found', 'text_mismatch', 'page_mismatch').
+    """
+    if not citations:
+        return 0.0
+
+    target = target_error.strip().lower()
+    error_count = 0
+    for cite in citations:
+        status = getattr(cite, "verification_status", None)
+        if status is None and isinstance(cite, dict):
+            status = cite.get("verification_status")
+        status_val = getattr(status, "value", str(status)) if status is not None else ""
+        if status_val.lower() == target:
+            error_count += 1
+
+    return round(error_count / float(len(citations)), 6)
+
+
+def wrong_contract_citation_rate(citations: list[Any]) -> float:
+    """Computes fraction of citations referencing wrong contract."""
+    return citation_error_rate(citations, "wrong_contract")
+
+
+def hallucinated_chunk_rate(citations: list[Any]) -> float:
+    """Computes fraction of citations referencing non-existent chunks."""
+    return citation_error_rate(citations, "chunk_not_found")
+
+
+def text_mismatch_rate(citations: list[Any]) -> float:
+    """Computes fraction of citations with tampered/mismatched quote text."""
+    return citation_error_rate(citations, "text_mismatch")
+
+
+def page_mismatch_rate(citations: list[Any]) -> float:
+    """Computes fraction of citations with incorrect page numbers."""
+    return citation_error_rate(citations, "page_mismatch")
+
+
+def calculate_grounding_metrics(claims: list[Any]) -> dict[str, float]:
+    """
+    Extracts all citations across claims and computes the full suite of
+    grounding, citation quality, and hallucination detection metrics.
+    """
+    all_citations: list[Any] = []
+    for claim in claims:
+        cites = getattr(claim, "citations", None)
+        if cites is None and isinstance(claim, dict):
+            cites = claim.get("citations", [])
+        if cites:
+            all_citations.extend(cites)
+
+    return {
+        "claim_groundedness_rate": claim_groundedness_rate(claims),
+        "citation_validity_rate": citation_validity_rate(all_citations),
+        "citation_completeness_rate": citation_completeness_rate(claims),
+        "wrong_contract_rate": wrong_contract_citation_rate(all_citations),
+        "hallucinated_chunk_rate": hallucinated_chunk_rate(all_citations),
+        "text_mismatch_rate": text_mismatch_rate(all_citations),
+        "page_mismatch_rate": page_mismatch_rate(all_citations),
+        "total_claims": float(len(claims)),
+        "total_citations": float(len(all_citations)),
+    }

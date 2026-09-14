@@ -8,17 +8,24 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 15A–16D: Query UI & Contract Viewer** |
+| **Current Phase** | **Phase 17A–17E: RAG Evaluation & Quality Benchmarking** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 2.00s), `npx tsc --noEmit` (0 errors); Backend: healthy; Git: working tree clean |
+| **Last Verified State** | Frontend: `npm run build` (built in 487ms), `npx tsc --noEmit` (0 errors); Backend: `test_rag_evaluation.py` (23/23 passed), `test_retrieval_evaluation.py` (10/10 passed); Git: working tree ready to commit |
 | **Last Git Commit** | `6c73043` ("feat: integrate frontend with backend") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 17: Production Hardening, E2E Evaluation & Deployment Packaging** |
-| **Exact Next Action** | Production dockerization and live end-to-end integration tests. |
+| **Next Phase** | **Phase 18: Production Hardening, E2E Verification & Packaging** |
+| **Exact Next Action** | Production dockerization, automated system smoke testing, and release packaging. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 17A–17E: RAG Evaluation & Quality Benchmarking** *(Completed)*
+  - [x] **17A — Retrieval Regression Evaluation:** Extended existing Phase 5D metrics (`precision_at_k`, `recall_at_k`, `reciprocal_rank_at_k`), deterministic benchmark query suite with ground truth relevance labels.
+  - [x] **17B — Grounded Generation Evaluation:** Implemented grounding metrics (`claim_groundedness_rate`, `citation_validity_rate`, `citation_completeness_rate`, `calculate_grounding_metrics`) measuring supported vs unsupported claims and citation integrity.
+  - [x] **17C — Hallucination & Unsupported-Claim Detection:** Deterministic evaluation detecting wrong-contract citations, hallucinated chunk IDs, verbatim text mismatches, page number mismatches, and insufficient evidence handling.
+  - [x] **17D — RAG Failure-Case Regression Suite:** Dedicated evaluation across 13 distinct failure modes (no retrieval matches, low retrieval confidence, irrelevant top-k, non-existent chunk ID, wrong-contract citation, verbatim text mismatch, page mismatch, malformed structured LLM output, provider API failure, empty retrieved context, conflicting facts, missing extracted facts, cross-contract evidence bleeding).
+  - [x] **17E — Quality Reporting & Invariant Protection:** Automated test assertions verifying 0% wrong-contract citation acceptance, 0% hallucinated chunk acceptance, 100% text mismatch rejection, and 100% insufficient-evidence detection. Structured JSON & Markdown evaluation summary reports.
 
 - [x] **Phase 15A–15D: Analyst Query UI & Grounded Citations** *(Completed)*
   - [x] Natural language query input with document scope selector (1–10 contracts) and multi-document query history.
@@ -513,3 +520,7 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Frontend Build (Phase 14 Check) | `npm run build` | **PASSED** (built in 282ms, 0 errors) |
 | 2026-09-14 | TypeScript Verification (Phase 14 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
 | 2026-09-14 | Backend Health Verification | `python -c "from app.main import app"` | **PASSED** (Backend app import healthy, 0 errors) |
+| 2026-09-14 | Phase 17 RAG Evaluation Tests | `pytest tests/test_rag_evaluation.py -v` | **PASSED** (23 passed, 0 skipped, 100% pass rate against Neon PostgreSQL) |
+| 2026-09-14 | Phase 5D Regression Verification | `pytest tests/test_retrieval_evaluation.py -v` | **PASSED** (10 passed, 0 skipped, 100% deterministic) |
+| 2026-09-14 | Frontend Build (Phase 17 Check) | `npm run build` | **PASSED** (built in 487ms, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Phase 17 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
