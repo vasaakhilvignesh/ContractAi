@@ -334,8 +334,15 @@ Format for each record:
 - **Alternatives considered:** Feeding all contract texts directly into an LLM context window to generate a comparative table in Markdown/JSON.
 - **Why alternatives were rejected:** Raw LLM generation across multiple large documents is non-deterministic, expensive, prone to missing subtle differences in numerical terms, and frequently hallucinates citations or mixes up parties.
 - **Consequences / Trade-offs:** Comparison relies on existing extracted structured facts and obligations. If a field was not extracted or is absent in a contract, the engine safely marks it as unavailable (`is_available=False`, `MISSING_FIELD`) rather than guessing.
-- **Phase:** Phase 11A–11E
-- **Date:** 2026-09-13
+### DEC-039: Obligation Query & Deterministic Analysis Architecture
+- **Decision:** Implement dedicated obligation query and analysis service layer (`obligation_service.py`), Pydantic v2 request/response schemas (`obligation_api.py`), and REST API endpoints (`GET /contracts/{contract_id}/obligations/query`, `POST /contracts/{contract_id}/obligations/query`, and `GET /contracts/{contract_id}/obligations/{obligation_id}`). The service supports multi-facet filtering (responsible party, obligation type, status, priority, recurrence, explicit due date existence, and calendar due date bounds). Every returned obligation resolves full 6-tier evidence lineage (`obligation → clause → chunk → page → contract`) and deterministically verifies authenticity, flagging `WRONG_CONTRACT`, `CHUNK_NOT_FOUND`, `PAGE_MISMATCH`, or `TEXT_MISMATCH`. Computes deterministic derived status (`is_overdue`, `days_until_due`, `cadence`, `confidence_tier`) and aggregate summary metrics (`by_responsible_party`, `by_obligation_type`, `recurring_count`, `overdue_count`, `upcoming_count`, `lineage_integrity_summary`) 100% in application code without LLM hallucination.
+- **Context:** Phase 12 requires contract-scoped obligation retrieval, filtering, deterministic analysis, and evidence-backed lineage verification ahead of frontend dashboard and interactive citation rendering.
+- **Why this decision was made:** Computing derived analysis (e.g. overdue flags, days remaining, party distributions) directly in application code guarantees mathematical precision and prevents LLM non-determinism from guessing due dates or legal responsibilities. Preserving the 6-tier lineage trace back to source chunks and pages ensures auditability. Strict contract scoping prevents cross-contract obligation leakage.
+- **Alternatives considered:** Relying purely on LLM prompts to analyze obligation schedules; using client-side JavaScript for all obligation filtering and aggregation.
+- **Why alternatives were rejected:** LLMs are non-deterministic and can hallucinate deadlines. Pure client-side filtering requires fetching all contract data to the browser, which creates performance and security concerns.
+- **Consequences / Trade-offs:** Derived analysis uses structured data already extracted. If dates or parties were absent in the contract text, the engine safely marks them as unspecified without guessing.
+- **Phase:** Phase 12A–12E
+- **Date:** 2026-09-14
 
 ---
 

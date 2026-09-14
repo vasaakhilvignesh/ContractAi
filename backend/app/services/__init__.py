@@ -190,6 +190,17 @@ from app.services.comparison_service import (
     compare_contracts_structured,
 )
 
+from app.services.obligation_service import (
+    ObligationServiceError,
+    ContractNotFoundError as ObligationServiceContractNotFoundError,
+    ObligationNotFoundError,
+    ObligationScopingError,
+    compute_derived_analysis,
+    resolve_obligation_lineage,
+    query_contract_obligations,
+    get_single_obligation_detail,
+)
+
 __all__ = [
     "create_contract",
     "get_contract",
@@ -309,4 +320,12 @@ __all__ = [
     "ComparisonServiceError",
     "ComparisonScopingError",
     "compare_contracts_structured",
+    "ObligationServiceError",
+    "ObligationServiceContractNotFoundError",
+    "ObligationNotFoundError",
+    "ObligationScopingError",
+    "compute_derived_analysis",
+    "resolve_obligation_lineage",
+    "query_contract_obligations",
+    "get_single_obligation_detail",
 ]

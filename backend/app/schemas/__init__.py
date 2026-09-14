@@ -140,6 +140,15 @@ from app.schemas.comparison import (
     ContractComparisonResponse,
 )
 
+from app.schemas.obligation_api import (
+    ObligationEvidenceCitation,
+    ObligationDerivedAnalysis,
+    ObligationDetailResponse,
+    ObligationAnalysisSummary,
+    ObligationQueryRequest,
+    ObligationQueryResponse,
+)
+
 __all__ = [
     "DatabaseHealthSchema",
     "HealthResponseSchema",
@@ -241,4 +250,10 @@ __all__ = [
     "ContractComparisonRequest",
     "ContractMetadataHeader",
     "ContractComparisonResponse",
+    "ObligationEvidenceCitation",
+    "ObligationDerivedAnalysis",
+    "ObligationDetailResponse",
+    "ObligationAnalysisSummary",
+    "ObligationQueryRequest",
+    "ObligationQueryResponse",
 ]

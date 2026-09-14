@@ -8,13 +8,13 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 11A–11E: Cross-Contract Comparison API** |
+| **Current Phase** | **Phase 12A–12E: Obligation API & Analysis** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Backend: 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
-| **Last Git Commit** | `4c0ded6` ("feat: add ai analyst api and multi-contract rag") |
+| **Last Verified State** | Backend: 10 passed (`test_obligation_api.py`), 7 passed (`test_comparison_api.py`), 10 passed (`test_analyst_api.py`), 9 passed (`test_grounded_rag.py`), 8 passed (`test_risk_engine.py`), 8 passed (`test_evidence_api_and_validation.py`), 16 passed (`test_evidence_model.py`); Frontend: `npm run build` & `npx tsc` clean (0 errors) |
+| **Last Git Commit** | `551e6f8` ("feat: add contract comparison api") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 12: Frontend Integration & Interactive Citation Highlighting** |
-| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, and comparison endpoints. |
+| **Next Phase** | **Phase 13: Frontend Integration & Interactive Citation Highlighting** |
+| **Exact Next Action** | Wire frontend API client services with live contract, extraction, evidence, risk, analyst, comparison, and obligation endpoints. |
 
 ---
 
@@ -308,12 +308,30 @@ This document tracks the active phase, completed milestones, blockers, and immed
   - [x] **Phase 11E: REST API Endpoints & Contract Scoping Enforcement** *(Completed)*
     - [x] Rejection of fewer than 2 or greater than 10 contract IDs, duplicate IDs, and non-existent IDs.
     - [x] 7 comprehensive unit, integration, and API tests in `backend/tests/test_comparison_api.py` (100% pass rate against live Neon PostgreSQL).
-- [ ] **Phase 12: Frontend Integration & Interactive Citation Highlighting**
+- [x] **Phase 12: Obligation API & Deterministic Analysis (Phase 12A–12E)** *(Completed)*
+  - [x] **Phase 12A: Obligation API Foundation** *(Completed)*
+    - [x] Built dedicated service layer in `backend/app/services/obligation_service.py` and Pydantic v2 schemas in `backend/app/schemas/obligation_api.py`.
+    - [x] Strongly typed responses and structured domain exceptions (`ObligationServiceError`, `ContractNotFoundError`, `ObligationNotFoundError`, `ObligationScopingError`).
+  - [x] **Phase 12B: Obligation Listing & Multi-Facet Filtering** *(Completed)*
+    - [x] Contract-scoped obligation retrieval with filtering by responsible party, obligation type, tracking status, priority, recurrence, and due date boundaries.
+    - [x] Zero invention of missing obligation fields or hallucinated dates.
+  - [x] **Phase 12C: Obligation Evidence & Lineage Verification** *(Completed)*
+    - [x] Assembled complete 6-tier evidence lineage: `obligation → clause → chunk → page → contract`.
+    - [x] Deterministic validation detecting and flagging `WRONG_CONTRACT`, `CHUNK_NOT_FOUND`, `PAGE_MISMATCH`, and `TEXT_MISMATCH`.
+  - [x] **Phase 12D: Deterministic Obligation Analysis** *(Completed)*
+    - [x] Pure code calculations for derived status: `is_overdue`, `days_until_due`, standard cadence representation, and extraction confidence tier.
+    - [x] Aggregate analysis metrics: breakdowns by party, type, status, priority, recurrence counts, overdue/upcoming counts, and lineage integrity summary.
+    - [x] Zero LLM calls in analysis pipeline (100% deterministic).
+  - [x] **Phase 12E: REST API & Contract Scoping Enforcement** *(Completed)*
+    - [x] REST API endpoints: `GET /contracts/{contract_id}/obligations/query`, `POST /contracts/{contract_id}/obligations/query`, and `GET /contracts/{contract_id}/obligations/{obligation_id}` (with `/api/v1` aliases).
+    - [x] Strict contract scoping enforcement: nonexistent contracts return 404, cross-contract obligation access returns 404.
+    - [x] 10 comprehensive unit, integration, and API tests in `backend/tests/test_obligation_api.py` (100% pass rate).
+- [ ] **Phase 13: Frontend Integration & Interactive Citation Highlighting**
   - [ ] Replacement of static mock data with API client services.
   - [ ] Upload wizard connection to backend ingestion pipeline.
   - [ ] Implementation of missing `/analyst` (AI chat with citation panel) and `/audit` pages.
   - [ ] Interactive source citation highlighting (click citation -> navigate to page view).
-- [ ] **Phase 13: Authentication, Evaluation, Testing & Production Hardening**
+- [ ] **Phase 14: Authentication, Evaluation, Testing & Production Hardening**
 
 ---
 
@@ -428,3 +446,6 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-13 | Phase 11 Comparison API Tests | `pytest tests/test_comparison_api.py -v` | **PASSED** (7 passed, 0 skipped against Neon PostgreSQL) |
 | 2026-09-13 | Frontend Build (Phase 11 Check) | `npm run build` | **PASSED** (built in 488ms, 0 errors) |
 | 2026-09-13 | TypeScript Verification (Phase 11 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Phase 12 Obligation API Tests | `pytest tests/test_obligation_api.py -v` | **PASSED** (10 passed, 0 skipped against Neon PostgreSQL) |
+| 2026-09-14 | Frontend Build (Phase 12 Check) | `npm run build` | **PASSED** (built in 1.77s, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Phase 12 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
