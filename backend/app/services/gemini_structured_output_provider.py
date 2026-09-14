@@ -13,6 +13,7 @@ Guarantees:
 """
 
 import logging
+import time
 from typing import Any, Type, TypeVar
 
 from google import genai
@@ -20,6 +21,7 @@ from google.genai import types
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.observability import log_operation_result
 from app.services.structured_output_provider import StructuredLLMProvider
 from app.services.structured_output_validator import (
     StructuredOutputConfigurationError,
@@ -105,6 +107,7 @@ class GeminiStructuredOutputProvider(StructuredLLMProvider):
 
         config = types.GenerateContentConfig(**config_args)
 
+        _call_start = time.perf_counter()
         try:
             response = await self._client.aio.models.generate_content(
                 model=self._model_name,
@@ -112,14 +115,28 @@ class GeminiStructuredOutputProvider(StructuredLLMProvider):
                 config=config,
             )
         except Exception as exc:
+            _call_ms = round((time.perf_counter() - _call_start) * 1000, 2)
             logger.error(
                 "Gemini API structured call failed for model '%s': %s",
                 self._model_name,
                 type(exc).__name__,
             )
+            log_operation_result(
+                operation="gemini_structured_llm_call",
+                duration_ms=_call_ms,
+                status="error",
+                metadata={
+                    "model": self._model_name,
+                    "schema": schema.__name__,
+                    "error_type": type(exc).__name__,
+                },
+                level=logging.ERROR,
+            )
             raise StructuredOutputProviderError(
                 f"Gemini API structured generation failed ({type(exc).__name__}): {str(exc)}"
             ) from exc
+
+        _call_ms = round((time.perf_counter() - _call_start) * 1000, 2)
 
         # Extract text safely from response
         raw_text: str | None = None
@@ -136,4 +153,16 @@ class GeminiStructuredOutputProvider(StructuredLLMProvider):
             )
 
         # Validate strictly against Pydantic schema
-        return validate_structured_output(raw_text=raw_text, schema=schema)
+        result = validate_structured_output(raw_text=raw_text, schema=schema)
+
+        log_operation_result(
+            operation="gemini_structured_llm_call",
+            duration_ms=_call_ms,
+            status="ok",
+            metadata={
+                "model": self._model_name,
+                "schema": schema.__name__,
+                "temperature": eff_temp,
+            },
+        )
+        return result

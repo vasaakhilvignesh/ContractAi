@@ -73,7 +73,14 @@ Before marking any task or phase complete:
    ```
 2. Run TypeScript checks:
    ```bash
-   npx tsc
+   npx tsc --noEmit
    ```
-3. If unit or integration tests exist, execute them and ensure 100% pass.
+3. If unit or integration tests exist, execute them and ensure 100% pass:
+   ```bash
+   backend\.venv\Scripts\pytest backend/tests/ -v
+   ```
 4. Verify there are no console errors, dead links, or unresolved imports.
+5. **Observability & Safe Logging Policy:**
+   - Every HTTP endpoint must propagate `X-Request-ID` and log duration in ms.
+   - Never log `DATABASE_URL` credentials, `GEMINI_API_KEY`, JWT secrets, Bearer tokens, or raw contract text.
+   - Always route exception details through `mask_secrets` and `SafeLoggingFilter`.

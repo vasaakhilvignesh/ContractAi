@@ -16,11 +16,13 @@ Implements:
 """
 
 import logging
+import time
 from typing import Optional
 import uuid
 
 from sqlalchemy.orm import Session
 
+from app.core.observability import log_operation_result
 from app.models.contract import Contract
 from app.models.document_chunk import DocumentChunk
 from app.schemas.query import HybridChunkMatch
@@ -257,9 +259,12 @@ async def answer_contract_query_grounded(
       4. Phase 9B LLM Generation: Calls StructuredLLMProvider with StructuredRAGAnswerLLM schema.
       5. Phase 9C & 9D Citation Assembly and Deterministic Verification.
     """
+    _pipeline_start = time.perf_counter()
+
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise ContractNotFoundError(f"Contract with id '{contract_id}' not found.")
+
 
     # 1. Hybrid Retrieval
     try:
@@ -276,6 +281,18 @@ async def answer_contract_query_grounded(
 
     # Phase 9E: Check for zero matches
     if not retrieval_res.matches:
+        _duration_ms = round((time.perf_counter() - _pipeline_start) * 1000, 2)
+        log_operation_result(
+            operation="rag_pipeline_execution",
+            duration_ms=_duration_ms,
+            status="ok",
+            metadata={
+                "contract_id": str(contract_id),
+                "rag_status": RAGStatus.NO_RETRIEVAL_MATCHES.value,
+                "has_sufficient_evidence": False,
+                "total_chunks": 0,
+            },
+        )
         return RAGQueryResponse(
             contract_id=contract_id,
             query=request.query,
@@ -294,6 +311,18 @@ async def answer_contract_query_grounded(
     top_score = retrieval_res.matches[0].hybrid_score
     min_threshold = request.min_score_threshold or 0.005
     if top_score < min_threshold:
+        _duration_ms = round((time.perf_counter() - _pipeline_start) * 1000, 2)
+        log_operation_result(
+            operation="rag_pipeline_execution",
+            duration_ms=_duration_ms,
+            status="ok",
+            metadata={
+                "contract_id": str(contract_id),
+                "rag_status": RAGStatus.LOW_RETRIEVAL_CONFIDENCE.value,
+                "has_sufficient_evidence": False,
+                "total_chunks": len(retrieval_res.matches),
+            },
+        )
         return RAGQueryResponse(
             contract_id=contract_id,
             query=request.query,
@@ -332,11 +361,33 @@ async def answer_contract_query_grounded(
             temperature=0.0,
         )
     except Exception as exc:
+        _duration_ms = round((time.perf_counter() - _pipeline_start) * 1000, 2)
         logger.error("Structured LLM generation failed for query '%s': %s", request.query, exc)
+        log_operation_result(
+            operation="rag_pipeline_execution",
+            duration_ms=_duration_ms,
+            status="error",
+            metadata={
+                "contract_id": str(contract_id),
+                "error_type": type(exc).__name__,
+            },
+        )
         raise RAGServiceError(f"LLM generation failed: {exc}") from exc
 
     # If the LLM determined insufficient evidence
     if not structured_llm_response.has_sufficient_evidence:
+        _duration_ms = round((time.perf_counter() - _pipeline_start) * 1000, 2)
+        log_operation_result(
+            operation="rag_pipeline_execution",
+            duration_ms=_duration_ms,
+            status="ok",
+            metadata={
+                "contract_id": str(contract_id),
+                "rag_status": RAGStatus.INSUFFICIENT_EVIDENCE.value,
+                "has_sufficient_evidence": False,
+                "total_chunks": len(retrieval_res.matches),
+            },
+        )
         return RAGQueryResponse(
             contract_id=contract_id,
             query=request.query,
@@ -352,6 +403,7 @@ async def answer_contract_query_grounded(
         )
 
     # Phase 9C & 9D: Citation Validation & Claim Construction
+    _cite_start = time.perf_counter()
     verified_claims: list[AnswerClaim] = []
     total_citations = 0
     valid_citations = 0
@@ -396,9 +448,38 @@ async def answer_contract_query_grounded(
             )
         )
 
+    _cite_ms = round((time.perf_counter() - _cite_start) * 1000, 2)
+    log_operation_result(
+        operation="citation_validation",
+        duration_ms=_cite_ms,
+        status="ok",
+        metadata={
+            "contract_id": str(contract_id),
+            "total_citations": total_citations,
+            "valid_citations": valid_citations,
+            "invalid_citations": invalid_citations,
+        },
+    )
+
     # Calculate overall confidence
     citation_ratio = (valid_citations / total_citations) if total_citations > 0 else 0.0
     overall_confidence = round(min(1.0, 0.5 + 0.5 * citation_ratio), 2)
+
+    _duration_ms = round((time.perf_counter() - _pipeline_start) * 1000, 2)
+    log_operation_result(
+        operation="rag_pipeline_execution",
+        duration_ms=_duration_ms,
+        status="ok",
+        metadata={
+            "contract_id": str(contract_id),
+            "rag_status": RAGStatus.ANSWERED.value,
+            "has_sufficient_evidence": True,
+            "total_chunks": len(retrieval_res.matches),
+            "total_citations": total_citations,
+            "valid_citations": valid_citations,
+            "invalid_citations": invalid_citations,
+        },
+    )
 
     return RAGQueryResponse(
         contract_id=contract_id,

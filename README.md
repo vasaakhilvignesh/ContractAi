@@ -40,7 +40,8 @@ Deterministic rules turn structured data into actionable intelligence.
 | **Database ORM & Driver** | SQLAlchemy 2.0 (`sqlalchemy==2.0.36`) + `psycopg2-binary==2.9.10` | 7 domain models, DeclarativeBase, pool pre-ping, connection health check |
 | **Primary Database** | Neon PostgreSQL (cloud-managed serverless) | Branch `production`, Database `neondb` (PostgreSQL 18.6 verified) |
 | **Vector Extension** | `pgvector` (`pgvector==0.3.6` on PostgreSQL) | Version 0.8.6 verified on Neon; `Vector` column mapped on `DocumentChunk` |
-| **Migration Tooling** | Alembic (`alembic==1.14.0`) | Migration `df2c477aaabb_initial_schema` applied to Neon PostgreSQL |
+| **Migration Tooling** | Alembic (`alembic==1.14.0`) | Migration `f31920b7c102` applied to Neon PostgreSQL |
+| **Observability & Latency** | Correlation IDs & structured JSON logging | `RequestIDMiddleware` + `SafeLoggingFilter` + stage profiling |
 
 
 ### Planned Target Architecture *(PLANNED — Future Phases)*

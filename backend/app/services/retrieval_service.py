@@ -16,12 +16,14 @@ Guarantees:
 """
 
 import logging
+import time
 import uuid
 from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.observability import log_operation_result
 from app.models.contract import Contract
 from app.models.document_chunk import DocumentChunk
 from app.schemas.query import ChunkMatch, ContractQueryResponse
@@ -160,17 +162,41 @@ async def query_contract_chunks(
     # Order nearest chunks first (cosine distance ascending)
     stmt = stmt.order_by(distance_expr.asc()).limit(top_k)
 
+    _db_start = time.perf_counter()
     try:
         results = db.execute(stmt).all()
     except Exception as exc:
+        _db_ms = round((time.perf_counter() - _db_start) * 1000, 2)
         logger.error(
             "Database vector query failed for contract %s: %s",
             contract_id,
             type(exc).__name__,
         )
+        log_operation_result(
+            operation="db_vector_similarity_query",
+            duration_ms=_db_ms,
+            status="error",
+            metadata={
+                "contract_id": str(contract_id),
+                "top_k": top_k,
+                "error_type": type(exc).__name__,
+            },
+        )
         raise RetrievalError(
             f"Database vector similarity query failed: {exc}"
         ) from exc
+
+    _db_ms = round((time.perf_counter() - _db_start) * 1000, 2)
+    log_operation_result(
+        operation="db_vector_similarity_query",
+        duration_ms=_db_ms,
+        status="ok",
+        metadata={
+            "contract_id": str(contract_id),
+            "top_k": top_k,
+            "matches_returned": len(results),
+        },
+    )
 
     # 7. Transform database records into ChunkMatch schemas
     matches: list[ChunkMatch] = []

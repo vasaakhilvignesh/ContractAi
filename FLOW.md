@@ -212,6 +212,48 @@ Contract (id)
 
 ---
 
+### 6. Observability, Metrics & Latency Architecture (Phase 19)
+
+ContractIQ features end-to-end request tracing, stage-level latency measurement, and leak-safe structured logging:
+
+```
+Incoming HTTP Request
+   │
+   ▼
+RequestIDMiddleware (`backend/app/middleware/request_id.py`)
+   ├── 1. Reads or generates UUID4 `X-Request-ID` (attaches to `request.state.request_id`)
+   ├── 2. Invokes route handler with monotonic wall-clock timer (`time.perf_counter`)
+   ├── 3. Emits structured access log: `method`, `route`, `response_status`, `duration_ms`, `request_id`
+   └── 4. Echoes `X-Request-ID` in response headers for client correlation
+   │
+   ▼
+Pipeline Stage Profiling & Metrics (`backend/app/core/observability.py`):
+   ├── `db_vector_similarity_query` (pgvector cosine search duration, top_k, matches count)
+   ├── `db_keyword_fts_query`        (PostgreSQL tsvector FTS duration, top_k, matches count)
+   ├── `semantic_retrieval`          (Embedding + vector retrieval duration, matches returned)
+   ├── `keyword_retrieval`           (FTS query duration, matches returned)
+   ├── `hybrid_rrf_fusion`           (RRF candidate fusion duration, candidate counts)
+   ├── `gemini_embedding_batch`      (Batch size, output dimension 768, latency)
+   ├── `gemini_structured_llm_call`  (Model `gemini-3.8-flash`, schema, temperature, duration)
+   ├── `citation_validation`         (Citation count, valid/invalid counts, latency)
+   └── `rag_pipeline_execution`      (End-to-end RAG answer duration, RAG status, confidence)
+   │
+   ▼
+Safe Logging Subsystem (`backend/app/core/logging_config.py`):
+   ├── `SafeLoggingFilter`: unconditionally scrubs DATABASE_URL passwords, JWT Bearer tokens,
+   │   Gemini API keys (`AIza...`), and authorization headers from all logs and tracebacks
+   ├── `SAFE_LOG_KEYS`: strict metadata whitelist prevents logging contract text or PII
+   └── `JSONLineFormatter`: compact machine-readable JSON lines in production
+   │
+   ▼
+Health, Liveness & Readiness Probes (`backend/app/main.py`):
+   ├── `GET /health`           (Enriched non-sensitive status, DB state, LLM & embedding config)
+   ├── `GET /health/liveness`  (200 OK process responsiveness probe)
+   └── `GET /health/readiness` (200 OK / 503 Service Unavailable dependency readiness probe)
+```
+
+---
+
 ## PART 2: PLANNED SYSTEM FLOW (Target Architecture)
 
 The following pipelines describe the intended production architecture. These components are **NOT YET IMPLEMENTED** and represent target workflows for subsequent phases.

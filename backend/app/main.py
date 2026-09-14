@@ -5,13 +5,12 @@ Phase 1 scope:
   - Application factory with lifespan
   - GET /health — verifies API process + real database connectivity
 
-Out of scope for Phase 1:
-  - Authentication middleware
-  - Contract upload/ingestion endpoints
-  - RAG/retrieval endpoints
-  - AI analysis endpoints
+Phase 19 additions:
+  - Structured logging via configure_logging() (19A)
+  - Request ID / latency middleware via RequestIDMiddleware (19A)
 """
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -20,14 +19,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.logging_config import configure_logging
 from app.core.security import mask_secrets
 from app.db.session import check_database_connection
-from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema
+from app.middleware.request_id import RequestIDMiddleware
+from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema, ReadinessResponseSchema
 from app.api.v1.contracts import router as contracts_router
 from app.api.v1.analyst import router as analyst_router
 from app.api.v1.comparison import router as comparison_router
 from app.api.v1.obligations import router as obligations_router
 from app.api.v1.auth import router as auth_router
+
+# Configure structured logging before any logger is used.
+configure_logging()
+_startup_logger = logging.getLogger(__name__)
 
 
 # ====================================================================
@@ -42,31 +47,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup ---
     db_summary = settings.safe_database_url_summary
-    print(f"[ContractIQ] Starting up. DB target: {db_summary}")
+    _startup_logger.info("[ContractIQ] Starting up. DB target: %s", db_summary)
 
     if not settings.is_database_configured:
-        print(
-            "[ContractIQ] WARNING: DATABASE_URL is not configured. "
+        _startup_logger.warning(
+            "[ContractIQ] DATABASE_URL is not configured. "
             "Database-dependent endpoints will return 503."
         )
     else:
-        # Perform a startup connectivity check (non-fatal — server starts regardless)
         result = check_database_connection()
         if result["connected"]:
-            print(
-                f"[ContractIQ] Database connected. "
-                f"pgvector: {result.get('pgvector_version', 'not found')}"
+            _startup_logger.info(
+                "[ContractIQ] Database connected. pgvector: %s",
+                result.get("pgvector_version", "not found"),
             )
         else:
-            print(
-                f"[ContractIQ] WARNING: Database connectivity check failed: "
-                f"{result.get('error', 'unknown error')}"
+            _startup_logger.warning(
+                "[ContractIQ] Database connectivity check failed: %s",
+                result.get("error", "unknown error"),
             )
 
     yield
 
     # --- Shutdown ---
-    print("[ContractIQ] Shutting down.")
+    _startup_logger.info("[ContractIQ] Shutting down.")
 
 
 # ====================================================================
@@ -100,6 +104,14 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # ----------------------------------------------------------------
+    # Request ID & Latency Middleware (Phase 19A)
+    # Attaches a correlation ID to every request and emits a single
+    # structured access-log line per response.  Must be added AFTER
+    # CORS middleware so it wraps the full request lifecycle.
+    # ----------------------------------------------------------------
+    app.add_middleware(RequestIDMiddleware)
 
     # ----------------------------------------------------------------
     # Security & Error Reliability (Phase 18D)
@@ -166,6 +178,11 @@ def _register_routes(app: FastAPI) -> None:
           - status: 'ok' if both API and DB are healthy; 'degraded' otherwise.
           - version: Application version.
           - database: Database connectivity details (no credentials).
+          - environment: Current app environment.
+          - llm_configured: Boolean flag indicating if Gemini is configured.
+          - llm_model: Configured LLM model name.
+          - embedding_configured: Boolean flag indicating if embedding provider is configured.
+          - embedding_model: Configured embedding model name.
         """
         db_result = check_database_connection()
 
@@ -182,7 +199,39 @@ def _register_routes(app: FastAPI) -> None:
             status=overall_status,
             version=settings.app_version,
             database=db_health,
+            environment=settings.app_env,
+            llm_configured=settings.is_gemini_configured,
+            llm_model=settings.llm_model,
+            embedding_configured=settings.is_gemini_configured,
+            embedding_model=settings.embedding_model,
         )
+
+    @app.get(
+        "/health/liveness",
+        tags=["System"],
+        summary="Process liveness probe",
+        description="Returns 200 OK if the API server process is running and able to handle requests.",
+    )
+    def liveness_check() -> dict:
+        return {"status": "alive", "version": settings.app_version}
+
+    @app.get(
+        "/health/readiness",
+        response_model=ReadinessResponseSchema,
+        tags=["System"],
+        summary="Dependency readiness probe",
+        description="Returns 200 OK if the application and required database dependency are ready to accept traffic; 503 otherwise.",
+    )
+    def readiness_check() -> JSONResponse:
+        db_result = check_database_connection()
+        is_ready = bool(db_result.get("connected"))
+        status_code = status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+        payload = {
+            "status": "ready" if is_ready else "not_ready",
+            "database_connected": is_ready,
+            "ready": is_ready,
+        }
+        return JSONResponse(status_code=status_code, content=payload)
 
     @app.get(
         "/",

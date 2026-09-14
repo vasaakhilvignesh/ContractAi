@@ -13,12 +13,14 @@ Guarantees:
 """
 
 import logging
+import time
 from typing import Any
 
 from google import genai
 from google.genai import types
 
 from app.core.config import settings
+from app.core.observability import log_operation_result
 from app.services.embedding_provider import (
     EmbeddingConfigurationError,
     EmbeddingProvider,
@@ -133,6 +135,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             title=title if task_type == EmbeddingTaskType.RETRIEVAL_DOCUMENT else None,
         )
 
+        _start = time.perf_counter()
         try:
             response = await self._client.aio.models.embed_content(
                 model=self._model_name,
@@ -140,6 +143,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                 config=config,
             )
         except Exception as e:
+            _duration_ms = round((time.perf_counter() - _start) * 1000, 2)
             # Defensive logging without raw text or API key
             logger.error(
                 "Gemini embedding API call failed for batch of %d items (model=%s): %s",
@@ -147,9 +151,31 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                 self._model_name,
                 type(e).__name__,
             )
+            log_operation_result(
+                operation="gemini_embedding_batch",
+                duration_ms=_duration_ms,
+                status="error",
+                metadata={
+                    "model": self._model_name,
+                    "batch_size": len(batch),
+                    "error_type": type(e).__name__,
+                },
+            )
             raise EmbeddingProviderError(
                 f"Gemini embedding request failed: {type(e).__name__}: {str(e)}"
             ) from e
+
+        _duration_ms = round((time.perf_counter() - _start) * 1000, 2)
+        log_operation_result(
+            operation="gemini_embedding_batch",
+            duration_ms=_duration_ms,
+            status="ok",
+            metadata={
+                "model": self._model_name,
+                "batch_size": len(batch),
+                "embedding_dimension": self._dimension,
+            },
+        )
 
         # Validate response structure
         embeddings_raw = getattr(response, "embeddings", None)

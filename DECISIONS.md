@@ -388,7 +388,23 @@ Format for each record:
 - **Phase:** Phase 18 Recovery
 - **Date:** 2026-09-14
 
+### DEC-044: Performance & Observability Architecture
+- **Decision:** Establish a consolidated, leak-safe performance and observability framework:
+  1. **Request Correlation & Latency Middleware:** `RequestIDMiddleware` generates or propagates `X-Request-ID` across every HTTP request and emits structured access log records measuring wall-clock duration (`duration_ms`), HTTP method, templated route, and status code.
+  2. **Safe Structured Logging:** `configure_logging()` configures Python logging with `SafeLoggingFilter`, automatically scrubbing `DATABASE_URL` credentials, JWT Bearer tokens, Gemini API keys (`AIza...`), and authorization headers from all emitted records and tracebacks before reaching stdout. In production (`app_debug=False`), logs are emitted as compact JSON lines.
+  3. **Multi-Stage Pipeline Profiling:** Instrumented discrete ContractIQ execution stages with wall-clock timing: `semantic_retrieval`, `keyword_retrieval`, `hybrid_rrf_fusion`, `db_vector_similarity_query`, `db_keyword_fts_query`, `gemini_embedding_batch`, `gemini_structured_llm_call`, `citation_validation`, and end-to-end `rag_pipeline_execution`. All metadata is strictly filtered through `SAFE_LOG_KEYS` to guarantee zero PII or contract text leakage.
+  4. **Database Performance Indexing:** Added Alembic migration `f31920b7c102` introducing composite indexes: `document_chunks(contract_id, chunk_index)` to accelerate chunk ordering/assembly, `contract_facts(contract_id, fact_key)` to accelerate fact retrieval in comparison and queries, and `clauses(contract_id, clause_type)` to accelerate clause filtering in risk analysis.
+  5. **Cloud Probing & Health Diagnostics:** Enhanced `/health` with safe environment, model, and connectivity flags without secrets. Added dedicated `/health/liveness` (process responsiveness) and `/health/readiness` (database dependency readiness returning 200/503) probes for production infrastructure orchestration.
+- **Context:** Enterprise-grade deployment requires actionable latency observability and reliable performance diagnostics while strictly preserving secret isolation and data privacy.
+- **Why this decision was made:** Complex multi-step pipelines (dense vector search, FTS, RRF, LLM generation, citation verification) require discrete timing visibility to identify performance bottlenecks and monitor upstream provider reliability without incurring external infrastructure complexity.
+- **Alternatives considered:** Introducing distributed tracing frameworks (OpenTelemetry / Jaeger), Redis-based caching, external APM agents, or unbounded log streaming.
+- **Why alternatives were rejected:** OpenTelemetry / external APM agents introduce heavy third-party dependencies and significant maintenance overhead for a student-explainable architecture. Redis introduces additional stateful infrastructure violates Rule 2 & Rule 10 when PostgreSQL composite indexes and native Python timing adequately solve latency needs.
+- **Consequences / Trade-offs:** Zero external infrastructure dependencies introduced. All logs and errors remain strictly scrubbed and structured.
+- **Phase:** Phase 19A–19E
+- **Date:** 2026-09-14
+
 ---
+
 
 
 

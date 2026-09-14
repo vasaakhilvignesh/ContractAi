@@ -8,17 +8,25 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 18A–18E: Security & Reliability Hardening (Remediated & Hardened)** |
+| **Current Phase** | **Phase 19: Performance & Observability (19A–19E)** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 536ms), `npx tsc --noEmit` (0 errors); Backend: `test_security_and_reliability.py` (18/18 passed), `test_secret_scanner.py` (6/6 passed); Secret scans: 0 secrets in repo or reachable git history |
-| **Last Git Commit** | `48e8b66` ("feat: harden security and reliability (Phase 18A-18E)") |
+| **Last Verified State** | Frontend: `npm run build` (built in 513ms), `npx tsc --noEmit` (0 errors); Backend: `test_observability.py` (17/17 passed), `python -m compileall` (0 errors); Alembic migration `f31920b7c102` applied to Neon DB; 0 secrets exposed |
+| **Last Git Commit** | `1e12b67` ("chore: update structured LLM model from gemini-2.5-flash to gemini-3.8-flash") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 19: Production Dockerization, Deployment & System Verification** |
-| **Exact Next Action** | Production docker compose setup, multi-service configuration, and end-to-end release packaging. |
+| **Next Phase** | **Phase 20: Production Deployment & System Packaging** |
+| **Exact Next Action** | Multi-service release packaging, containerization, and final submission artifacts. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 19A–19E: Performance & Observability** *(Completed)*
+  - [x] **19A — Request & Latency Observability:** Added `RequestIDMiddleware` generating/propagating `X-Request-ID` across all requests; structured access log per response capturing method, route template, status code, and latency in ms (`time.perf_counter`); production JSON-line logging (`JSONLineFormatter`).
+  - [x] **19B — RAG & Provider Metrics:** Instrumented discrete execution stages with wall-clock timing: `semantic_retrieval`, `keyword_retrieval`, `hybrid_rrf_fusion`, `gemini_embedding_batch`, `gemini_structured_llm_call`, `citation_validation`, and `rag_pipeline_execution`. All metadata filtered against `SAFE_LOG_KEYS`.
+  - [x] **19C — Database Performance Indexing:** Created Alembic migration `f31920b7c102` adding composite indexes on `document_chunks(contract_id, chunk_index)`, `contract_facts(contract_id, fact_key)`, and `clauses(contract_id, clause_type)`. Successfully applied to live Neon database.
+  - [x] **19D — Safe Error & Operational Handling:** `SafeLoggingFilter` automatically scrubs `DATABASE_URL` passwords, JWT Bearer tokens, Gemini API keys (`AIza...`), and authorization headers from all logs and tracebacks. Exception handlers mask secrets before client responses.
+  - [x] **19E — Health, Readiness & Diagnostics:** Enhanced `/health` with safe environment, model, and connectivity flags without secrets. Added dedicated `/health/liveness` (process responsiveness) and `/health/readiness` (database dependency readiness returning 200/503) probes. Added 17 tests in `test_observability.py` (100% pass).
+
 
 - [x] **Phase 18 Security Remediation & Secret Scanner Hardening** *(Completed)*
   - [x] **Secret Exposure Remediation:** Located exposed Google API key fixture in test suite; replaced with dynamic synthetic token constructors (`mock_gemini_key = "AIza" + ("SyntheticKeyForMaskTesting" * 2)[:35]`); purged literal string from all tracked code.

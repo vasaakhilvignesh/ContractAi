@@ -25,12 +25,14 @@ Guarantees:
 """
 
 import logging
+import time
 import uuid
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.observability import log_operation_result
 from app.models.contract import Contract
 from app.schemas.query import (
     ChunkMatch,
@@ -202,8 +204,10 @@ async def query_contract_hybrid(
     if not contract:
         raise ContractNotFoundError(f"Contract with id '{contract_id}' not found.")
 
-    # 2. Execute semantic vector retrieval (Phase 5A)
+    # 2. Execute semantic vector retrieval (Phase 5A) — with timing
     semantic_matches: list[ChunkMatch] = []
+    _sem_start = time.perf_counter()
+    _sem_status = "ok"
     try:
         semantic_resp = await query_contract_chunks(
             db=db,
@@ -218,6 +222,7 @@ async def query_contract_hybrid(
     except (NoChunksFoundError, NoEmbeddedChunksError):
         # Gracefully handle contracts without chunks or embeddings
         semantic_matches = []
+        _sem_status = "skipped"
     except Exception as exc:
         logger.warning(
             "Semantic retrieval error for contract %s: %s. Falling back to keyword-only.",
@@ -225,9 +230,24 @@ async def query_contract_hybrid(
             exc,
         )
         semantic_matches = []
+        _sem_status = "error"
+    finally:
+        _sem_ms = round((time.perf_counter() - _sem_start) * 1000, 2)
+        log_operation_result(
+            operation="semantic_retrieval",
+            duration_ms=_sem_ms,
+            status=_sem_status,
+            metadata={
+                "contract_id": str(contract_id),
+                "top_k": top_k,
+                "matches_returned": len(semantic_matches),
+            },
+        )
 
-    # 3. Execute keyword full-text retrieval (Phase 5B)
+    # 3. Execute keyword full-text retrieval (Phase 5B) — with timing
     keyword_matches: list[KeywordChunkMatch] = []
+    _kw_start = time.perf_counter()
+    _kw_status = "ok"
     try:
         keyword_resp = await query_contract_keywords(
             db=db,
@@ -245,13 +265,41 @@ async def query_contract_hybrid(
             exc,
         )
         keyword_matches = []
+        _kw_status = "error"
+    finally:
+        _kw_ms = round((time.perf_counter() - _kw_start) * 1000, 2)
+        log_operation_result(
+            operation="keyword_retrieval",
+            duration_ms=_kw_ms,
+            status=_kw_status,
+            metadata={
+                "contract_id": str(contract_id),
+                "top_k": top_k,
+                "matches_returned": len(keyword_matches),
+            },
+        )
 
-    # 4. Fuse candidate sets using Reciprocal Rank Fusion
+    # 4. Fuse candidate sets using Reciprocal Rank Fusion — with timing
+    _rrf_start = time.perf_counter()
     fused_matches = reciprocal_rank_fusion(
         semantic_matches=semantic_matches,
         keyword_matches=keyword_matches,
         top_k=top_k,
         rrf_k=rrf_k,
+    )
+    _rrf_ms = round((time.perf_counter() - _rrf_start) * 1000, 2)
+    log_operation_result(
+        operation="hybrid_rrf_fusion",
+        duration_ms=_rrf_ms,
+        status="ok",
+        metadata={
+            "contract_id": str(contract_id),
+            "semantic_matches": len(semantic_matches),
+            "keyword_matches": len(keyword_matches),
+            "matches_returned": len(fused_matches),
+            "rrf_k": rrf_k,
+            "top_k": top_k,
+        },
     )
 
     # 5. Return unified response

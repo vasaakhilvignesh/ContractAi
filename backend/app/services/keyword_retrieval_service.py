@@ -15,11 +15,13 @@ Guarantees:
 """
 
 import logging
+import time
 import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.observability import log_operation_result
 from app.models.contract import Contract
 from app.models.document_chunk import DocumentChunk
 from app.schemas.query import (
@@ -88,17 +90,41 @@ async def query_contract_keywords(
         .limit(top_k)
     )
 
+    _db_start = time.perf_counter()
     try:
         results = db.execute(stmt).all()
     except Exception as exc:
+        _db_ms = round((time.perf_counter() - _db_start) * 1000, 2)
         logger.error(
             "Keyword retrieval query failed for contract %s: %s",
             contract_id,
             type(exc).__name__,
         )
+        log_operation_result(
+            operation="db_keyword_fts_query",
+            duration_ms=_db_ms,
+            status="error",
+            metadata={
+                "contract_id": str(contract_id),
+                "top_k": top_k,
+                "error_type": type(exc).__name__,
+            },
+        )
         raise KeywordRetrievalError(
             f"Database keyword full-text query failed: {exc}"
         ) from exc
+
+    _db_ms = round((time.perf_counter() - _db_start) * 1000, 2)
+    log_operation_result(
+        operation="db_keyword_fts_query",
+        duration_ms=_db_ms,
+        status="ok",
+        metadata={
+            "contract_id": str(contract_id),
+            "top_k": top_k,
+            "matches_returned": len(results),
+        },
+    )
 
     # 5. Transform results into KeywordChunkMatch models
     matches: list[KeywordChunkMatch] = []
