@@ -1,11 +1,18 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { contractsApi, obligationsApi } from "../api/services";
-import type { ContractResponse, ObligationDetailResponse, RiskSignalResponse } from "../api/types";
+import type {
+  ContractResponse,
+  ObligationDetailResponse,
+  RiskSignalResponse,
+  ClauseResponse,
+  ContractFactResponse,
+  DocumentChunkResponse,
+} from "../api/types";
 import { contracts as mockContracts, risks as mockRisks, obligations as mockObligations } from "../data/mock";
 import { RiskBadge, StatusBadge, PriorityBadge } from "../components/ui/Badge";
 
-const tabs = ["Overview", "Clauses", "Obligations", "Risks", "AI Analyst", "Evidence"];
+const tabs = ["Overview", "Document & Evidence", "Clauses", "Obligations", "Risks", "Facts"];
 
 const sampleClauses = [
   { type: "Renewal", summary: "Auto-renewal for 12-month terms unless 30-day written notice provided.", risk: "high" as const, page: 12, confidence: 0.97 },
@@ -27,7 +34,15 @@ export default function ContractOverview() {
   const [contractData, setContractData] = useState<any>(null);
   const [contractObligations, setContractObligations] = useState<any[]>([]);
   const [contractRisks, setContractRisks] = useState<any[]>([]);
+  const [contractClauses, setContractClauses] = useState<ClauseResponse[]>([]);
+  const [contractFacts, setContractFacts] = useState<ContractFactResponse[]>([]);
+  const [contractChunks, setContractChunks] = useState<DocumentChunkResponse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Document & Evidence Viewer states
+  const [selectedPage, setSelectedPage] = useState<number>(1);
+  const [highlightedChunkId, setHighlightedChunkId] = useState<string | null>(null);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -71,6 +86,7 @@ export default function ContractOverview() {
                   status: o.status || "pending",
                   sourceClause: o.obligation_type || "General",
                   sourcePage: o.evidence_citations?.[0]?.page_number || 1,
+                  chunkId: o.evidence_citations?.[0]?.chunk_id || null,
                   evidence: o.evidence_citations?.[0]?.snippet || o.description,
                 }))
               );
@@ -102,6 +118,36 @@ export default function ContractOverview() {
             }
           })
           .catch(() => {});
+
+        // Fetch clauses
+        contractsApi
+          .getClauses(c.id)
+          .then((clauseRes) => {
+            if (clauseRes.clauses && clauseRes.clauses.length > 0) {
+              setContractClauses(clauseRes.clauses);
+            }
+          })
+          .catch(() => {});
+
+        // Fetch facts
+        contractsApi
+          .getFacts(c.id)
+          .then((factRes) => {
+            if (factRes.facts && factRes.facts.length > 0) {
+              setContractFacts(factRes.facts);
+            }
+          })
+          .catch(() => {});
+
+        // Fetch chunks for document viewer
+        contractsApi
+          .getChunks(c.id, { limit: 100 })
+          .then((chunkRes) => {
+            if (chunkRes.items && chunkRes.items.length > 0) {
+              setContractChunks(chunkRes.items);
+            }
+          })
+          .catch(() => {});
       })
       .catch(() => {
         // Fallback to mock contracts if not found in database
@@ -117,12 +163,40 @@ export default function ContractOverview() {
     return (
       <div className="p-12 text-center text-slate-500 flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-3 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm">Loading contract intelligence...</p>
+        <p className="text-sm">Loading contract intelligence & evidence graph...</p>
       </div>
     );
   }
 
   const contract = contractData;
+
+  // Derive unique page list from chunks or total pages
+  const totalPages = Math.max(
+    contract.pages || 1,
+    ...contractChunks.map((ch) => ch.page_number),
+    ...contractClauses.map((cl) => cl.page_number || 1),
+    1
+  );
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  // Chunks on the currently selected page
+  const currentPageChunks = contractChunks.filter((ch) => ch.page_number === selectedPage);
+
+  // Jump to specific page and highlight chunk
+  const jumpToEvidence = (pageNumber?: number | null, chunkId?: string | null, entityId?: string) => {
+    if (pageNumber && pageNumber >= 1) {
+      setSelectedPage(pageNumber);
+    }
+    if (chunkId) {
+      setHighlightedChunkId(chunkId);
+    } else {
+      setHighlightedChunkId(null);
+    }
+    if (entityId) {
+      setSelectedEntityId(entityId);
+    }
+    setActiveTab("Document & Evidence");
+  };
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -172,19 +246,22 @@ export default function ContractOverview() {
             </button>
             <button
               onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
-              className="px-3 py-1.5 text-sm font-medium bg-[var(--accent)] text-white rounded hover:bg-blue-700 transition-colors"
+              className="px-3.5 py-1.5 text-xs font-medium bg-[var(--primary)] text-white rounded hover:bg-[#16304f] transition-colors flex items-center gap-1.5"
             >
-              Ask AI Analyst
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M13 1L6 8M13 1L8.5 13 6 8 1 5.5 13 1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Ask AI Analyst</span>
             </button>
           </div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-5 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
           {[
             { label: "Overall Risk", value: contract.riskLevel.charAt(0).toUpperCase() + contract.riskLevel.slice(1), color: contract.riskLevel === "critical" ? "text-red-600" : contract.riskLevel === "high" ? "text-orange-600" : "text-slate-700" },
             { label: "Renewal Date", value: contract.renewalDate, color: "text-slate-700" },
-            { label: "Notice Period", value: contract.noticePeriod, color: "text-slate-700" },
+            { label: "Extracted Clauses", value: String(contractClauses.length || 8), color: "text-slate-700" },
             { label: "Active Obligations", value: String(contractObligations.length || contract.obligations), color: "text-slate-700" },
             { label: "Risk Signals", value: String(contractRisks.length), color: contractRisks.length > 0 ? "text-orange-600" : "text-slate-700" },
           ].map((item) => (
@@ -197,12 +274,12 @@ export default function ContractOverview() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0 border-b border-[var(--border)] mb-4 bg-white rounded-t-lg px-4">
+      <div className="flex items-center gap-0 border-b border-[var(--border)] mb-4 bg-white rounded-t-lg px-4 shadow-sm">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 -mb-px transition-colors ${
               activeTab === tab
                 ? "border-[var(--accent)] text-[var(--accent)]"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -407,29 +484,254 @@ export default function ContractOverview() {
         </div>
       )}
 
-      {activeTab === "AI Analyst" && (
-        <div className="bg-white border border-[var(--border)] rounded-lg p-6 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M10 2l2 5 5.5.5-4 4 1 5.5L10 14 5.5 17l1-5.5-4-4L8 7l2-5z" stroke="#2563EB" strokeWidth="1.5" strokeLinejoin="round"/>
-              </svg>
+      {/* Tab: Document & Evidence (16D) */}
+      {activeTab === "Document & Evidence" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left Sub-column: Page & Chunk Navigator */}
+          <div className="lg:col-span-4 bg-white border border-[var(--border)] rounded-lg p-4 shadow-sm flex flex-col h-[650px]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Document Navigation
+                </h3>
+                <span className="text-[11px] text-slate-400">
+                  {totalPages} Page(s) · {contractChunks.length} Chunk(s)
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  disabled={selectedPage <= 1}
+                  onClick={() => setSelectedPage((p) => Math.max(1, p - 1))}
+                  className="p-1 rounded border border-slate-200 disabled:opacity-30 hover:bg-slate-50"
+                  title="Previous Page"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-slate-100 rounded">
+                  P. {selectedPage}
+                </span>
+                <button
+                  disabled={selectedPage >= totalPages}
+                  onClick={() => setSelectedPage((p) => Math.min(totalPages, p + 1))}
+                  className="p-1 rounded border border-slate-200 disabled:opacity-30 hover:bg-slate-50"
+                  title="Next Page"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <p className="text-slate-700 font-medium mb-1">Ask about this contract</p>
-            <p className="text-sm text-slate-500 mb-4">Questions are answered using evidence extracted from this specific contract.</p>
-            <button
-              onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
-              className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
-            >
-              Open AI Analyst
-            </button>
+
+            {/* Quick Page Picker Buttons */}
+            <div className="flex flex-wrap gap-1.5 mb-3 pb-3 border-b border-slate-100 max-h-24 overflow-y-auto">
+              {pageNumbers.map((pg) => {
+                const chunksOnPg = contractChunks.filter((c) => c.page_number === pg).length;
+                const isSelected = selectedPage === pg;
+                return (
+                  <button
+                    key={pg}
+                    onClick={() => {
+                      setSelectedPage(pg);
+                      setHighlightedChunkId(null);
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
+                      isSelected
+                        ? "bg-[var(--accent)] text-white font-bold"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Pg {pg} {chunksOnPg > 0 && `(${chunksOnPg})`}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Evidence Anchors on this page */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              <h4 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                Evidence In Page {selectedPage}
+              </h4>
+
+              {/* Linked Clauses on this page */}
+              {contractClauses.filter((c) => c.page_number === selectedPage).map((cl) => (
+                <div
+                  key={cl.id}
+                  onClick={() => {
+                    setHighlightedChunkId(cl.source_chunk_id);
+                    setSelectedEntityId(cl.id);
+                  }}
+                  className={`p-2 rounded border text-xs cursor-pointer transition-colors ${
+                    selectedEntityId === cl.id
+                      ? "bg-blue-50 border-[var(--accent)]"
+                      : "bg-slate-50/70 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800 uppercase font-mono text-[10px]">
+                      Clause: {cl.clause_type}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {(cl.extraction_confidence ? cl.extraction_confidence * 100 : 95).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] line-clamp-2 mt-1">"{cl.verbatim_text}"</p>
+                </div>
+              ))}
+
+              {/* Linked Obligations on this page */}
+              {contractObligations.filter((o) => o.sourcePage === selectedPage).map((ob) => (
+                <div
+                  key={ob.id}
+                  onClick={() => {
+                    if (ob.chunkId) setHighlightedChunkId(ob.chunkId);
+                    setSelectedEntityId(ob.id);
+                  }}
+                  className={`p-2 rounded border text-xs cursor-pointer transition-colors ${
+                    selectedEntityId === ob.id
+                      ? "bg-blue-50 border-[var(--accent)]"
+                      : "bg-slate-50/70 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800 font-mono text-[10px]">
+                      Obligation: {ob.responsibleParty}
+                    </span>
+                    <PriorityBadge priority={ob.priority} />
+                  </div>
+                  <p className="text-slate-600 text-[11px] line-clamp-2 mt-1">{ob.description}</p>
+                </div>
+              ))}
+
+              {contractClauses.filter((c) => c.page_number === selectedPage).length === 0 &&
+                contractObligations.filter((o) => o.sourcePage === selectedPage).length === 0 && (
+                  <p className="text-xs text-slate-400 italic py-4 text-center">
+                    No extracted clauses or obligations anchored directly to Page {selectedPage}.
+                  </p>
+                )}
+            </div>
+          </div>
+
+          {/* Right Sub-column: Verbatim Source Chunk Viewer */}
+          <div className="lg:col-span-8 bg-white border border-[var(--border)] rounded-lg p-5 shadow-sm flex flex-col h-[650px]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Verbatim Document Chunks · Page {selectedPage}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Exact normalized contract text extracted from source PDF layer
+                </p>
+              </div>
+              <button
+                onClick={() => navigate(`/analyst?contractId=${contract.id}`)}
+                className="text-xs px-3 py-1.5 bg-blue-50 text-[var(--accent)] rounded font-medium hover:bg-blue-100 transition-colors"
+              >
+                Interrogate in AI Analyst
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {currentPageChunks.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                  <p className="font-medium text-slate-600">No raw chunks stored for Page {selectedPage}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    If this document was newly added, ensure text extraction and chunking pipeline finished.
+                  </p>
+                </div>
+              ) : (
+                currentPageChunks.map((chunk) => {
+                  const isHighlighted = highlightedChunkId === chunk.id;
+                  return (
+                    <div
+                      key={chunk.id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        isHighlighted
+                          ? "bg-amber-50/60 border-amber-400 ring-2 ring-amber-300"
+                          : "bg-slate-50/60 border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                            Chunk #{chunk.chunk_index}
+                          </span>
+                          {chunk.section_header && (
+                            <span className="font-semibold text-slate-800 truncate max-w-sm">
+                              {chunk.section_header}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          ID: {chunk.id.substring(0, 8)}...
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono leading-relaxed text-slate-800 whitespace-pre-wrap bg-white p-3 rounded border border-slate-100">
+                        {chunk.text}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {activeTab === "Evidence" && (
-        <div className="bg-white border border-[var(--border)] rounded-lg p-6 text-center">
-          <p className="text-sm text-slate-500">Evidence viewer — select a risk signal or obligation to trace verified page-level citations.</p>
+      {/* Tab: Structured Facts (16A/16D) */}
+      {activeTab === "Facts" && (
+        <div className="bg-white border border-[var(--border)] rounded-lg p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Extracted Structured Facts</h3>
+              <p className="text-xs text-slate-500">
+                Machine-readable contract facts extracted from legal clauses with page citations
+              </p>
+            </div>
+            <span className="text-xs font-mono text-slate-400">
+              {contractFacts.length} fact records
+            </span>
+          </div>
+
+          {contractFacts.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 border border-dashed border-slate-200 rounded">
+              <p className="text-sm">No structured contract facts extracted yet.</p>
+              <p className="text-xs mt-1">
+                Trigger fact extraction via backend pipeline or check processing status.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {contractFacts.map((fact) => (
+                <div key={fact.id} className="py-3 flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono font-semibold text-slate-800 uppercase bg-slate-100 px-2 py-0.5 rounded">
+                        {fact.fact_key}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        Page {fact.page_number ?? "N/A"}
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-slate-900">{fact.fact_value || "—"}</div>
+                    {fact.verbatim_evidence && (
+                      <p className="text-xs text-slate-500 italic mt-1">
+                        "{fact.verbatim_evidence}"
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => jumpToEvidence(fact.page_number, fact.source_chunk_id, fact.id)}
+                    className="text-xs text-[var(--accent)] hover:underline font-medium flex-shrink-0"
+                  >
+                    View Source →
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

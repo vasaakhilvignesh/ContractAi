@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ContractIQ — API TypeScript Type Definitions
  * Aligned with backend schemas (Phases 1–13)
  */
@@ -198,4 +198,64 @@ export interface RiskSignalListResponse {
     medium_count: number;
     low_count: number;
   };
+}
+
+export interface ClauseResponse {
+  id: string;
+  contract_id: string;
+  clause_type: string;
+  clause_label: string | null;
+  verbatim_text: string;
+  page_number: number | null;
+  source_chunk_id: string | null;
+  extraction_confidence: number | null;
+  is_reviewed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractClauseListResponse {
+  contract_id: string;
+  total_clauses: number;
+  clauses: ClauseResponse[];
+}
+
+export interface ContractFactResponse {
+  id: string;
+  contract_id: string;
+  fact_key: string;
+  fact_value: string | null;
+  fact_value_json: string | null;
+  verbatim_evidence: string | null;
+  page_number: number | null;
+  confidence: number | null;
+  source_clause_id: string | null;
+  source_chunk_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractFactListResponse {
+  contract_id: string;
+  total_facts: number;
+  facts: ContractFactResponse[];
+}
+
+export interface DocumentChunkResponse {
+  id: string;
+  contract_id: string;
+  page_number: number;
+  chunk_index: number;
+  char_start: number | null;
+  char_end: number | null;
+  section_header: string | null;
+  text: string;
+  created_at: string;
+}
+
+export interface ContractChunkListResponse {
+  items: DocumentChunkResponse[];
+  total: number;
+  limit: number;
+  offset: number;
 }

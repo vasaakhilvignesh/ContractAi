@@ -65,10 +65,16 @@ flowchart TD
     Upload -->|On Complete: Back| Contracts
 
     Overview -->|Click Compare CTA| Compare
-    Overview -->|Click Ask AI / Risks / Obligations| Overview
+    Overview -->|Click Ask AI Analyst| Analyst
+    Overview -->|Click Evidence / Chunk Link| Overview
+    Analyst -->|Click Contract Link in Citation| Overview
+    Analyst -->|Click Compare CTA| Compare
+    Analyst -->|Click Contract Library CTA| Contracts
 
     Obligations -->|Click Contract Vendor Link| Overview
+    Obligations -->|Click Ask AI Analyst| Analyst
     Risks -->|Click Contract Vendor Link| Overview
+    Risks -->|Click Analyze Risk / AI Analyst| Analyst
     Compare -->|Click Contract Vendor Header| Overview
 ```
 

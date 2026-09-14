@@ -8,17 +8,32 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 14A–14H: Frontend Integration & Application Shell** |
+| **Current Phase** | **Phase 15A–16D: Query UI & Contract Viewer** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 282ms), `npx tsc --noEmit` (0 errors); Backend: healthy (`Backend app import healthy!`, 6 auth/ownership tests passed); Git: working tree clean |
-| **Last Git Commit** | `59125cc` ("feat: add authentication and authorization") |
+| **Last Verified State** | Frontend: `npm run build` (built in 2.00s), `npx tsc --noEmit` (0 errors); Backend: healthy; Git: working tree clean |
+| **Last Git Commit** | `6c73043` ("feat: integrate frontend with backend") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 15: Evaluation, End-to-End Testing & Production Hardening** |
-| **Exact Next Action** | Run end-to-end user evaluation flows and production Docker packaging. |
+| **Next Phase** | **Phase 17: Production Hardening, E2E Evaluation & Deployment Packaging** |
+| **Exact Next Action** | Production dockerization and live end-to-end integration tests. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 15A–15D: Analyst Query UI & Grounded Citations** *(Completed)*
+  - [x] Natural language query input with document scope selector (1–10 contracts) and multi-document query history.
+  - [x] Grounded answer UI with structured claims badges (verified claim vs unverified) and interactive citation jumping.
+  - [x] Traceable citation list with contract title, 1-indexed page number, chunk ID, and exact verbatim snippet.
+  - [x] Insufficient-evidence alert banner preventing hallucinated contractual claims.
+  - [x] Expandable retrieval diagnostics panel displaying hybrid RRF method, contract counts, chunk counts, context character lengths, latency, and chunk rank metrics.
+- [x] **Phase 16A–16D: Contract Document Viewer & Navigation** *(Completed)*
+  - [x] Contract Overview header and executive summary with risk level, processing status, and key terms.
+  - [x] Document & Evidence Viewer with page-by-page selector, chunk-level inspection, and verbatim PDF text display.
+  - [x] Structured Clauses tab with verbatim text, legal category, extraction confidence, and direct links to source document chunks.
+  - [x] Extracted Obligations tab displaying responsible parties, due dates, frequencies, and verbatim quotes.
+  - [x] Deterministic Risk Signals tab detailing triggered rules, reasons, and recommended counsel actions.
+  - [x] Structured Facts tab presenting normalized parameters with page citations and source links.
+  - [x] Cross-route navigation linking `/contracts`, `/contracts/:id`, `/analyst`, `/obligations`, `/risks`, and `/compare`.
 
 - [x] **Phase 0: Project Baseline, Audit & Memory Protocol** *(Completed)*
   - [x] Full codebase audit of dependencies, tooling, routes, components, and styling.

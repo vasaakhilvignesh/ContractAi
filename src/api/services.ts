@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ContractIQ — Service Endpoints Implementation
  */
 
@@ -14,6 +14,9 @@ import type {
   ContractComparisonResponse,
   ObligationQueryResponse,
   RiskSignalListResponse,
+  ContractClauseListResponse,
+  ContractFactListResponse,
+  ContractChunkListResponse,
 } from "./types";
 
 export const authApi = {
@@ -109,6 +112,30 @@ export const contractsApi = {
 
   getRisks: (contractId: string) =>
     apiRequest<RiskSignalListResponse>(`/contracts/${contractId}/risks`),
+
+  getClauses: (contractId: string, clauseType?: string) => {
+    const query = clauseType ? `?clause_type=${encodeURIComponent(clauseType)}` : "";
+    return apiRequest<ContractClauseListResponse>(`/contracts/${contractId}/clauses${query}`);
+  },
+
+  getFacts: (contractId: string, factKey?: string) => {
+    const query = factKey ? `?fact_key=${encodeURIComponent(factKey)}` : "";
+    return apiRequest<ContractFactListResponse>(`/contracts/${contractId}/facts${query}`);
+  },
+
+  getChunks: (contractId: string, params?: { offset?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.offset !== undefined) query.set("offset", String(params.offset));
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return apiRequest<ContractChunkListResponse>(`/contracts/${contractId}/chunks${qs ? `?${qs}` : ""}`);
+  },
+
+  getEvidence: (contractId: string) =>
+    apiRequest<any>(`/contracts/${contractId}/evidence`),
+
+  getEvidenceLineage: (contractId: string) =>
+    apiRequest<any>(`/contracts/${contractId}/evidence/lineage`),
 };
 
 export const analystApi = {
