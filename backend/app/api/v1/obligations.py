@@ -21,7 +21,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user_optional, verify_contract_access_by_id
+from app.core.security import mask_secrets
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.obligation_api import (
     ObligationDetailResponse,
     ObligationQueryRequest,
@@ -94,9 +97,12 @@ def query_obligations_get(
         default=None,
         description="Reference calendar date for overdue/upcoming calculations (defaults to today).",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ObligationQueryResponse:
     """GET endpoint for querying contract obligations."""
+    verify_contract_access_by_id(contract_id, current_user, db)
+
     req = ObligationQueryRequest(
         responsible_party=responsible_party,
         obligation_type=obligation_type,
@@ -118,18 +124,20 @@ def query_obligations_get(
     except ContractNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract with id '{contract_id}' not found",
+            detail=mask_secrets(f"Contract with id '{contract_id}' not found"),
         )
     except ObligationServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error querying obligations for contract %s: %s", contract_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while querying obligations: {exc}",
+            detail=f"An unexpected error occurred while querying obligations: {mask_secrets(str(exc))}",
         )
 
 
@@ -146,9 +154,12 @@ def query_obligations_get(
 def query_obligations_post(
     contract_id: uuid.UUID,
     payload: ObligationQueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ObligationQueryResponse:
     """POST endpoint for querying contract obligations with structured request body."""
+    verify_contract_access_by_id(contract_id, current_user, db)
+
     try:
         return obligation_service.query_contract_obligations(
             db=db,
@@ -158,18 +169,20 @@ def query_obligations_post(
     except ContractNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract with id '{contract_id}' not found",
+            detail=mask_secrets(f"Contract with id '{contract_id}' not found"),
         )
     except ObligationServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error querying obligations for contract %s: %s", contract_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while querying obligations: {exc}",
+            detail=f"An unexpected error occurred while querying obligations: {mask_secrets(str(exc))}",
         )
 
 
@@ -194,9 +207,12 @@ def get_obligation_detail(
         default=None,
         description="Reference calendar date for overdue calculation.",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ObligationDetailResponse:
     """GET endpoint for single obligation detail."""
+    verify_contract_access_by_id(contract_id, current_user, db)
+
     try:
         return obligation_service.get_single_obligation_detail(
             db=db,
@@ -208,18 +224,20 @@ def get_obligation_detail(
     except ContractNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract with id '{contract_id}' not found",
+            detail=mask_secrets(f"Contract with id '{contract_id}' not found"),
         )
     except (ObligationNotFoundError, ObligationScopingError) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except ObligationServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(
             "Unexpected error getting obligation %s for contract %s: %s",
@@ -229,5 +247,5 @@ def get_obligation_detail(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while getting obligation: {exc}",
+            detail=f"An unexpected error occurred while getting obligation: {mask_secrets(str(exc))}",
         )

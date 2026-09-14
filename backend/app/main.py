@@ -15,10 +15,12 @@ Out of scope for Phase 1:
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.security import mask_secrets
 from app.db.session import check_database_connection
 from app.schemas.health import DatabaseHealthSchema, HealthResponseSchema
 from app.api.v1.contracts import router as contracts_router
@@ -98,6 +100,28 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # ----------------------------------------------------------------
+    # Security & Error Reliability (Phase 18D)
+    # Global exception handlers ensure credentials, database URLs,
+    # and internal secrets are scrubbed before returning to the client.
+    # ----------------------------------------------------------------
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        detail = mask_secrets(str(exc.detail)) if isinstance(exc.detail, str) else exc.detail
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": detail},
+            headers=exc.headers,
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        masked_error = mask_secrets(str(exc))
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": f"Internal server error: {masked_error}"},
+        )
 
     # ----------------------------------------------------------------
     # Routes

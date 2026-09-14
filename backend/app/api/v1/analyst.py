@@ -15,7 +15,14 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import (
+    get_current_user_optional,
+    verify_contract_access_by_id,
+    verify_contracts_access_by_ids,
+)
+from app.core.security import mask_secrets
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.analyst import (
     AnalystQueryResponse,
     CrossContractAnalystRequest,
@@ -48,9 +55,13 @@ router = APIRouter(prefix="/analyst", tags=["Analyst"])
 )
 async def query_analyst_universal(
     payload: CrossContractAnalystRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> AnalystQueryResponse:
     """Universal Analyst query route accepting single or multiple contract IDs."""
+    # IDOR access verification across all queried contracts
+    verify_contracts_access_by_ids(payload.contract_ids, current_user, db)
+
     try:
         if len(payload.contract_ids) == 1:
             single_req = SingleContractAnalystRequest(
@@ -72,23 +83,25 @@ async def query_analyst_universal(
     except ContractScopingError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except rag_service.ContractNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except AnalystServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error in query_analyst_universal: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during analyst query: {exc}",
+            detail=f"An unexpected error occurred during analyst query: {mask_secrets(str(exc))}",
         )
 
 
@@ -106,9 +119,13 @@ async def query_analyst_universal(
 async def query_analyst_single(
     contract_id: uuid.UUID,
     payload: SingleContractAnalystRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> AnalystQueryResponse:
     """Single contract analyst inquiry."""
+    # IDOR access verification
+    verify_contract_access_by_id(contract_id, current_user, db)
+
     try:
         return await analyst_service.ask_contract_analyst_single(
             db=db,
@@ -118,18 +135,20 @@ async def query_analyst_single(
     except rag_service.ContractNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract with id '{contract_id}' not found",
+            detail=mask_secrets(f"Contract with id '{contract_id}' not found"),
         )
     except AnalystServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error in query_analyst_single for %s: %s", contract_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during single contract analyst query: {exc}",
+            detail=f"An unexpected error occurred during single contract analyst query: {mask_secrets(str(exc))}",
         )
 
 
@@ -146,9 +165,13 @@ async def query_analyst_single(
 )
 async def query_analyst_cross(
     payload: CrossContractAnalystRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> AnalystQueryResponse:
     """Cross-contract multi-document comparative inquiry."""
+    # IDOR access verification across all queried contracts
+    verify_contracts_access_by_ids(payload.contract_ids, current_user, db)
+
     try:
         return await analyst_service.ask_contract_analyst_cross(
             db=db,
@@ -157,16 +180,18 @@ async def query_analyst_cross(
     except ContractScopingError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except AnalystServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error in query_analyst_cross: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during cross-contract analyst query: {exc}",
+            detail=f"An unexpected error occurred during cross-contract analyst query: {mask_secrets(str(exc))}",
         )

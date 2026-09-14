@@ -100,7 +100,12 @@ from app.services.structured_output_validator import (
     StructuredOutputError,
     StructuredOutputConfigurationError,
 )
-from app.core.auth import get_current_user_optional, verify_contract_access
+from app.core.auth import (
+    get_current_user_optional,
+    verify_contract_access,
+    verify_contract_access_by_id,
+)
+from app.core.security import mask_secrets
 from app.models.user import User
 
 
@@ -255,6 +260,7 @@ def delete_contract(
 async def upload_contract_pdf(
     contract_id: uuid.UUID,
     file: UploadFile = File(..., description="PDF file to upload"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractUploadResponse:
     """Upload and associate a contract PDF."""
@@ -265,6 +271,7 @@ async def upload_contract_pdf(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
 
     # 2. Validate the file format, extension, size, and %PDF- signature
     content, file_size = await storage_service.validate_pdf_upload(file)
@@ -320,6 +327,7 @@ async def upload_contract_pdf(
 )
 def get_contract_processing_status(
     contract_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractProcessingStatusResponse:
     """Get contract processing status."""
@@ -329,6 +337,7 @@ def get_contract_processing_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
     return ContractProcessingStatusResponse(
         contract_id=db_contract.id,
         processing_status=db_contract.processing_status,
@@ -348,6 +357,7 @@ def get_contract_processing_status(
 def update_contract_processing_status(
     contract_id: uuid.UUID,
     status_in: ContractProcessingStatusUpdate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractProcessingStatusResponse:
     """Transition contract processing status."""
@@ -357,6 +367,7 @@ def update_contract_processing_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
 
     try:
         updated_contract = contract_service.update_contract_processing_status(
@@ -393,6 +404,7 @@ def update_contract_processing_status(
 )
 def extract_contract_text(
     contract_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractExtractionResponse:
     """Extract text from uploaded contract PDF."""
@@ -403,6 +415,7 @@ def extract_contract_text(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
 
     # 2. Verify file has been uploaded
     if not db_contract.file_storage_key:
@@ -556,6 +569,7 @@ def extract_contract_text(
 )
 def chunk_contract(
     contract_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractChunkingResponse:
     """Normalize text and generate clause-aware chunks from uploaded contract."""
@@ -566,6 +580,7 @@ def chunk_contract(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
 
     # 2. Verify file has been uploaded
     if not db_contract.file_storage_key:
@@ -701,6 +716,7 @@ def list_contract_chunks(
     contract_id: uuid.UUID,
     offset: int = Query(0, ge=0, description="Number of chunks to skip"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of chunks to return"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractChunkListResponse:
     """List document chunks with pagination."""
@@ -710,6 +726,8 @@ def list_contract_chunks(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Contract with id '{contract_id}' not found",
         )
+    verify_contract_access(db_contract, current_user)
+    verify_contract_access(db_contract, current_user)
 
     items, total = chunking_service.list_contract_chunks(
         db=db,
@@ -739,9 +757,11 @@ def list_contract_chunks(
 async def embed_contract(
     contract_id: uuid.UUID,
     payload: Optional[ContractEmbedRequest] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractEmbeddingResponse:
     """Generate and persist vector embeddings for contract chunks."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     force_reembed = payload.force_reembed if payload else False
     try:
         return await embedding_generation_service.generate_contract_embeddings(
@@ -790,9 +810,11 @@ async def embed_contract(
 async def query_contract(
     contract_id: uuid.UUID,
     payload: ContractQueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractQueryResponse:
     """Execute semantic vector retrieval for contract chunks."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return await retrieval_service.query_contract_chunks(
             db=db,
@@ -842,9 +864,11 @@ async def query_contract(
 async def query_contract_keywords(
     contract_id: uuid.UUID,
     payload: ContractKeywordQueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractKeywordQueryResponse:
     """Execute keyword full-text retrieval for contract chunks."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return await keyword_retrieval_service.query_contract_keywords(
             db=db,
@@ -884,9 +908,11 @@ async def query_contract_keywords(
 async def query_contract_hybrid(
     contract_id: uuid.UUID,
     payload: ContractHybridQueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractHybridQueryResponse:
     """Execute hybrid retrieval combining semantic and keyword search via RRF."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return await hybrid_retrieval_service.query_contract_hybrid(
             db=db,
@@ -926,9 +952,11 @@ async def query_contract_hybrid(
 async def extract_clauses(
     contract_id: uuid.UUID,
     payload: Optional[ContractClauseExtractionRequest] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractClauseExtractionResponse:
     """Extract and persist structured clauses for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     force = payload.force_reextract if payload else False
     try:
         return await clause_extraction_service.extract_contract_clauses(
@@ -976,9 +1004,11 @@ def get_clauses(
         default=None,
         description="Filter by legal clause type (e.g. termination, liability, auto_renewal)",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractClauseListResponse:
     """List persisted clauses for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return clause_extraction_service.list_contract_clauses(
             db=db,
@@ -1012,9 +1042,11 @@ def get_clauses(
 async def extract_obligations(
     contract_id: uuid.UUID,
     payload: Optional[ContractObligationExtractionRequest] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractObligationExtractionResponse:
     """Extract and persist structured obligations for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     force = payload.force_reextract if payload else False
     try:
         return await obligation_extraction_service.extract_contract_obligations(
@@ -1071,9 +1103,11 @@ def get_obligations(
         alias="status",
         description="Filter by tracking status (e.g. pending, in_progress, completed)",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractObligationListResponse:
     """List persisted obligations for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return obligation_extraction_service.list_contract_obligations(
             db=db,
@@ -1109,9 +1143,11 @@ def get_obligations(
 async def extract_facts(
     contract_id: uuid.UUID,
     payload: Optional[ContractFactExtractionRequest] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractFactExtractionResponse:
     """Extract and persist structured contract-level facts for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     force = payload.force_reextract if payload else False
     try:
         return await contract_fact_service.extract_contract_facts(
@@ -1159,9 +1195,11 @@ def get_facts(
         default=None,
         description="Filter by fact key (e.g. effective_date, governing_law, notice_period)",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractFactListResponse:
     """List persisted contract facts for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return contract_fact_service.list_contract_facts(
             db=db,
@@ -1197,9 +1235,11 @@ def get_facts(
 def create_evidence_record(
     contract_id: uuid.UUID,
     payload: EvidenceCreate,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceResponse:
     """Create a persistent evidence record."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.create_evidence(
             db=db,
@@ -1245,9 +1285,11 @@ def list_contract_evidence(
         ge=1,
         description="Filter by source page number (1-indexed)",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceListResponse:
     """List evidence records for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.list_contract_evidence(
             db=db,
@@ -1290,9 +1332,11 @@ def list_contract_evidence_lineage(
         ge=1,
         description="Filter by source page number (1-indexed)",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceLineageListResponse:
     """List complete evidence lineages for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.list_evidence_lineage(
             db=db,
@@ -1323,9 +1367,11 @@ def list_contract_evidence_lineage(
 def get_evidence(
     contract_id: uuid.UUID,
     evidence_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceResponse:
     """Get single evidence record."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.get_evidence_by_id(
             db=db,
@@ -1359,9 +1405,11 @@ def get_evidence(
 def get_evidence_lineage(
     contract_id: uuid.UUID,
     evidence_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceLineage:
     """Get lineage trace for an evidence record."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.get_evidence_lineage(
             db=db,
@@ -1406,9 +1454,11 @@ def validate_contract_evidence(
         default=None,
         description="Optionally validate only a specific evidence record",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> EvidenceValidationSummary:
     """Validate contract evidence integrity."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return evidence_service.validate_contract_evidence(
             db=db,
@@ -1445,9 +1495,11 @@ def validate_contract_evidence(
 def evaluate_contract_risks(
     contract_id: uuid.UUID,
     payload: RiskEvaluationRequest = RiskEvaluationRequest(),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> RiskEvaluationResponse:
     """Evaluate contract risk rules deterministically."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return risk_service.evaluate_and_persist_contract_risks(
             db=db,
@@ -1488,9 +1540,11 @@ def list_contract_risks(
         default=None,
         description="Filter by risk category: renewal | termination | liability | indemnification | payment | compliance | critical_terms | other",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> RiskSignalListResponse:
     """List persisted risk signals for a contract."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return risk_service.list_contract_risk_signals(
             db=db,
@@ -1529,9 +1583,11 @@ def list_contract_risks(
 async def query_contract_grounded(
     contract_id: uuid.UUID,
     payload: RAGQueryRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> RAGQueryResponse:
     """Execute grounded RAG query with deterministic citation validation."""
+    verify_contract_access_by_id(contract_id, current_user, db)
     try:
         return await rag_service.answer_contract_query_grounded(
             db=db,

@@ -16,7 +16,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import (
+    get_current_user_optional,
+    verify_contracts_access_by_ids,
+)
+from app.core.security import mask_secrets
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.comparison import (
     ContractComparisonRequest,
     ContractComparisonResponse,
@@ -46,9 +52,13 @@ router = APIRouter(prefix="/contracts/compare", tags=["Contract Comparison"])
 )
 def compare_contracts(
     payload: ContractComparisonRequest,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractComparisonResponse:
     """Compare multiple contracts with deterministic variance analysis."""
+    # IDOR access verification across all compared contracts
+    verify_contracts_access_by_ids(payload.contract_ids, current_user, db)
+
     try:
         return comparison_service.compare_contracts_structured(
             db=db,
@@ -57,18 +67,20 @@ def compare_contracts(
     except ComparisonScopingError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except ComparisonServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Unexpected error in compare_contracts: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during contract comparison: {exc}",
+            detail=f"An unexpected error occurred during contract comparison: {mask_secrets(str(exc))}",
         )
 
 
@@ -88,6 +100,7 @@ def compare_contracts_get(
         default=True,
         description="Whether to include obligations in the comparison.",
     ),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> ContractComparisonResponse:
     """GET convenience handler for contract comparison."""
@@ -118,4 +131,4 @@ def compare_contracts_get(
         contract_ids=parsed_ids,
         include_obligations=include_obligations,
     )
-    return compare_contracts(payload=req, db=db)
+    return compare_contracts(payload=req, current_user=current_user, db=db)

@@ -1,4 +1,4 @@
-﻿"""
+"""
 ContractIQ — Core Authentication & Authorization Dependencies
 
 Phase 13C scope:
@@ -129,3 +129,39 @@ def verify_contract_access(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: you do not have permission to access this contract",
         )
+
+
+def verify_contract_access_by_id(
+    contract_id: uuid.UUID,
+    current_user: Optional[User],
+    db: Session,
+) -> Contract:
+    """
+    Fetches a contract by ID and verifies current_user has access.
+    Raises HTTPException(404) if not found, HTTPException(403) if unauthorized.
+    """
+    contract = db.query(Contract).filter(Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Contract with id '{contract_id}' not found",
+        )
+    verify_contract_access(contract, current_user)
+    return contract
+
+
+def verify_contracts_access_by_ids(
+    contract_ids: list[uuid.UUID],
+    current_user: Optional[User],
+    db: Session,
+) -> list[Contract]:
+    """
+    Fetches contracts by IDs and verifies current_user has access to each.
+    Raises HTTPException(404) if any contract not found, HTTPException(403) if any unauthorized.
+    """
+    contracts = []
+    for cid in contract_ids:
+        c = verify_contract_access_by_id(cid, current_user, db)
+        contracts.append(c)
+    return contracts
+

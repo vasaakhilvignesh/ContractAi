@@ -8,17 +8,24 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 17A–17E: RAG Evaluation & Quality Benchmarking** |
+| **Current Phase** | **Phase 18A–18E: Security & Reliability Hardening** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 487ms), `npx tsc --noEmit` (0 errors); Backend: `test_rag_evaluation.py` (23/23 passed), `test_retrieval_evaluation.py` (10/10 passed); Git: working tree ready to commit |
-| **Last Git Commit** | `6c73043` ("feat: integrate frontend with backend") |
+| **Last Verified State** | Frontend: `npm run build` (built in 478ms), `npx tsc --noEmit` (0 errors); Backend: `test_security_and_reliability.py` (18/18 passed), Core regression suite (42/42 passed); Git: working tree clean and ready |
+| **Last Git Commit** | `11bbc67` ("feat: add rag evaluation and quality benchmarks") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Phase 18: Production Hardening, E2E Verification & Packaging** |
-| **Exact Next Action** | Production dockerization, automated system smoke testing, and release packaging. |
+| **Next Phase** | **Phase 19: Production Dockerization, Deployment & System Verification** |
+| **Exact Next Action** | Production docker compose setup, multi-service configuration, and end-to-end release packaging. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 18A–18E: Security & Reliability Hardening** *(Completed)*
+  - [x] **18A — Prompt Injection Protection:** Hardened Grounded RAG & Analyst prompt builders; wrapped retrieved contract chunks in `<untrusted_contract_text chunk_id="{id}" page="{page}">` XML tags with explicit negative directives prohibiting execution of instructions embedded within contracts; preserved 100% exact substring citation verification.
+  - [x] **18B — Authentication & Authorization (IDOR) Hardening:** Re-verified JWT validation (tampered signature, expired, missing, malformed token rejection); enforced tenant ownership (`verify_contract_access_by_id`, `verify_contracts_access_by_ids`) across all 28+ contract endpoints, analyst queries, obligations, and multi-contract comparison routes.
+  - [x] **18C — Input & File Security:** Enforced `sanitize_filename` path traversal defense, strict `%PDF-` magic byte validation, 20 MB size ceiling, non-empty payload requirement, and atomic cleanup of stored files on transaction failure.
+  - [x] **18D — Provider & Database Reliability:** Implemented `mask_secrets` utility scrubbing database passwords, `postgresql://` URIs, `GEMINI_API_KEY`, JWT secrets, and Authorization Bearer credentials from all client-facing error payloads and FastAPI global exception handlers.
+  - [x] **18E — Comprehensive Security & Reliability Test Suite:** Created 18 focused tests in `backend/tests/test_security_and_reliability.py` verifying prompt injection defense, multi-contract isolation, IDOR across all routers, token tampering/expiration, file upload security, and secret masking (100% pass rate).
 
 - [x] **Phase 17A–17E: RAG Evaluation & Quality Benchmarking** *(Completed)*
   - [x] **17A — Retrieval Regression Evaluation:** Extended existing Phase 5D metrics (`precision_at_k`, `recall_at_k`, `reciprocal_rank_at_k`), deterministic benchmark query suite with ground truth relevance labels.
@@ -524,3 +531,8 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Phase 5D Regression Verification | `pytest tests/test_retrieval_evaluation.py -v` | **PASSED** (10 passed, 0 skipped, 100% deterministic) |
 | 2026-09-14 | Frontend Build (Phase 17 Check) | `npm run build` | **PASSED** (built in 487ms, 0 errors) |
 | 2026-09-14 | TypeScript Verification (Phase 17 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Phase 18 Security & Reliability Suite | `pytest tests/test_security_and_reliability.py -v` | **PASSED** (18 passed, 0 skipped, 100% pass rate) |
+| 2026-09-14 | Core RAG & API Regression Suite | `pytest tests/test_grounded_rag.py tests/test_analyst_api.py tests/test_comparison_api.py tests/test_obligation_api.py tests/test_auth_and_ownership.py -v` | **PASSED** (42 passed, 0 skipped, 100% pass rate) |
+| 2026-09-14 | Frontend Production Build (Phase 18 Check) | `npm run build` | **PASSED** (built in 478ms, 0 errors) |
+| 2026-09-14 | TypeScript Verification (Phase 18 Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+

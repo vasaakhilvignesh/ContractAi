@@ -364,10 +364,22 @@ Format for each record:
 - **Alternatives considered:** Live LLM-as-a-judge (RAGAS, TruLens, DeepEval); manual spot checks; reliance solely on unit tests.
 - **Why alternatives were rejected:** LLM-as-a-judge approaches introduce non-deterministic judge scoring, high token costs, and vendor API rate limit failures in automated CI pipelines. Manual spot checks provide no regression protection.
 - **Consequences / Trade-offs:** Evaluation assesses grounded extraction and citation validation against fixed benchmark ground truths; extending evaluation to novel legal clauses requires adding curated cases to the benchmark dataset.
-- **Phase:** Phase 17A–17E
+### DEC-042: Prompt Injection Defense, Universal IDOR Enforcement & Secret Hygiene Standards
+- **Decision:** Implement multi-layered security and reliability controls across backend query pipelines, API routers, upload handlers, and global exception handlers:
+  1. **Prompt Injection Hardening:** Bounded all retrieved contract chunks in `<untrusted_contract_text chunk_id="{id}" page="{page}">` XML tags and injected defensive system directives forbidding LLMs from treating contract text as system commands, ignoring formatting rules, or bypassing citation requirements. Preserved 100% exact substring matching for citation validation.
+  2. **Universal Tenancy & IDOR Protection:** Enforced `verify_contract_access_by_id` and `verify_contracts_access_by_ids` across all single-contract and multi-contract routes (`/contracts/*`, `/analyst/*`, `/contracts/compare`, `/obligations/*`). Users cannot access, query, extract, or compare contracts belonging to other tenants.
+  3. **Input & File Upload Hardening:** Enforced `sanitize_filename` path traversal prevention, `%PDF-` magic byte inspection, 20MB file size ceiling, non-empty payload requirements, and atomic file removal on database failure.
+  4. **Secret Scrubbing & Exception Masking:** Added `mask_secrets` utility scrubbing database passwords, `postgresql://` URIs, `GEMINI_API_KEY`, JWT secret tokens, and Authorization Bearer credentials from all client-facing error payloads and FastAPI global exception handlers.
+- **Context:** Phase 18 requires rigorous enterprise security, prompt injection defenses, tenant boundary enforcement, and credentials safety before production deployment.
+- **Why this decision was made:** RAG applications process untrusted user documents which may contain adversarial prompt injection payloads designed to leak system instructions or fabricate claims. Without universal IDOR checks, subresource endpoints (e.g. `/contracts/{id}/clauses`) risk leaking contractual data across organizations. Unhandled exceptions or error messages risk exposing DB connection strings or LLM API keys.
+- **Alternatives considered:** Relying solely on client-side authentication checks; trusting raw LLM instructions without XML structural boundaries; relying on raw FastAPI traceback logging in production.
+- **Why alternatives were rejected:** Client-only checks leave REST API endpoints vulnerable to direct IDOR attacks. Unbounded LLM context allows delimiter collision and instruction hijacking. Raw tracebacks frequently leak DB connection strings and credentials.
+- **Consequences / Trade-offs:** Every contract-scoped subresource query performs an ownership check against `Contract.uploaded_by` (or admin role), ensuring rock-solid multi-tenant isolation.
+- **Phase:** Phase 18A–18E
 - **Date:** 2026-09-14
 
 ---
+
 
 ## 3. Pending & Undecided Decisions (To Be Documented in Future Phases)
 
