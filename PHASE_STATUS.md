@@ -209,7 +209,7 @@ This document tracks the active phase, completed milestones, blockers, and immed
     - [x] Implemented strict Pydantic model validation (`validate_structured_output`) with structured field-level error reporting.
     - [x] Implemented `GeminiStructuredOutputProvider` using official `google-genai` SDK and `types.GenerateContentConfig(response_mime_type="application/json", response_schema=...)`.
     - [x] Built `get_structured_llm_provider` factory with dependency injection support (`client: genai.Client | None`).
-    - [x] Extended `Settings` with `llm_provider`, `llm_model="gemini-2.5-flash"`, `llm_temperature=0.0`, and updated `.env.example`.
+    - [x] Extended `Settings` with `llm_provider`, `llm_model="gemini-3.8-flash"` (updated from `gemini-2.5-flash`), `llm_temperature=0.0`, and updated `.env.example`.
     - [x] Exported all structured output classes, functions, and exceptions from `backend/app/services/__init__.py`.
     - [x] 25 comprehensive unit and integration tests in `backend/tests/test_structured_output.py` (100% mocked, 0 real API calls, 100% pass rate).
   - [x] **Phase 6B: Structured Clause Extraction** *(Completed)*

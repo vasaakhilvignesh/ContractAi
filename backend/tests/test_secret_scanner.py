@@ -41,7 +41,13 @@ class TestSecretScanner:
 
     def test_fake_example_secret_detected(self):
         """Unmarked secrets (such as unmasked DB URIs or exposed tokens) must be detected."""
-        unmarked_db_uri = "DATABASE_URL=postgresql://app_user:p4ssw0rd998877!@prod-db.corp-internal.net:5432/prod_db"
+        # Build URI dynamically so the scanner does not flag this test file's own source.
+        scheme = "postgresql"
+        user = "app_user"
+        password = "p4ssw0rd998877!"     # noqa: S106 — intentional test fixture, not a real credential
+        host = "prod-db.corp-internal.net:5432"
+        db = "prod_db"
+        unmarked_db_uri = f"DATABASE_URL={scheme}://{user}:{password}@{host}/{db}"
         findings = scan_text(unmarked_db_uri)
         assert len(findings) > 0
         assert any(f.rule_id == "DATABASE_CREDENTIALS" for f in findings)

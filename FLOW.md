@@ -161,7 +161,7 @@ FastAPI Application (`backend/app/main.py`)
    │
    ├── Structured Output & Extraction Layer (Phase 6A, 6B, 6C & 6D — `backend/app/services/`):
    │    ├── StructuredLLMProvider (ABC for vendor-independent structured output generation)
-   │    ├── GeminiStructuredOutputProvider (Google Gemini gemini-2.5-flash via google-genai SDK, response_schema mode)
+   │    ├── GeminiStructuredOutputProvider (Google Gemini gemini-3.8-flash via google-genai SDK, response_schema mode)
    │    ├── validate_structured_output (Strict Pydantic v2 validation, fence stripping, structured error formatting)
    │    ├── get_structured_llm_provider (Factory function for provider resolution and dependency injection)
    │    ├── clause_extraction_service (Deterministic chunk processing, lineage preservation, idempotent persistence)

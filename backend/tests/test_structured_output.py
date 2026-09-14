@@ -228,7 +228,7 @@ class TestGeminiStructuredOutputProvider:
 
         provider = GeminiStructuredOutputProvider(
             api_key="mock-gemini-key",
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.8-flash",
             temperature=0.0,
             client=mock_client,
         )
@@ -248,7 +248,7 @@ class TestGeminiStructuredOutputProvider:
         mock_client.aio.models.generate_content.assert_awaited_once()
         call_kwargs = mock_client.aio.models.generate_content.await_args.kwargs
 
-        assert call_kwargs["model"] == "gemini-2.5-flash"
+        assert call_kwargs["model"] == "gemini-3.8-flash"
         assert call_kwargs["contents"] == "Extract entity data."
         config = call_kwargs["config"]
         assert config.response_mime_type == "application/json"
@@ -410,19 +410,19 @@ class TestStructuredOutputFactory:
 
         assert isinstance(provider, GeminiStructuredOutputProvider)
         assert isinstance(provider, StructuredLLMProvider)
-        assert provider.model_name == "gemini-2.5-flash"
+        assert provider.model_name == "gemini-3.8-flash"
 
     def test_factory_respects_custom_model_and_temp(self):
         """Factory applies custom model name and temperature."""
         mock_client = MagicMock()
         provider = get_structured_llm_provider(
             provider_type="gemini",
-            model_name="gemini-2.5-flash-custom",
+            model_name="gemini-3.8-flash-custom",
             temperature=0.2,
             client=mock_client,
         )
 
-        assert provider.model_name == "gemini-2.5-flash-custom"
+        assert provider.model_name == "gemini-3.8-flash-custom"
         assert provider.temperature == 0.2
 
     def test_factory_unsupported_provider_raises_configuration_error(self):

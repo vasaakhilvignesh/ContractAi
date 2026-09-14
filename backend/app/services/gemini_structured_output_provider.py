@@ -46,7 +46,7 @@ class GeminiStructuredOutputProvider(StructuredLLMProvider):
         client: genai.Client | None = None,
     ) -> None:
         self._api_key = api_key if api_key is not None else settings.gemini_api_key
-        self._model_name = model_name or settings.llm_model or "gemini-2.5-flash"
+        self._model_name = model_name or settings.llm_model or "gemini-3.8-flash"
         self._temperature = (
             temperature if temperature is not None else settings.llm_temperature
         )

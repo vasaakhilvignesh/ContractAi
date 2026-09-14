@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     # Structured LLM Provider (Phase 6A — Google Gemini)
     # ----------------------------------------------------------------
     llm_provider: str = "gemini"
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = "gemini-3.8-flash"
     llm_temperature: float = 0.0
 
     # ----------------------------------------------------------------
