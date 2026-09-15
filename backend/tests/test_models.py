@@ -24,6 +24,8 @@ from app.models.clause import Clause
 from app.models.obligation import Obligation
 from app.models.risk_signal import RiskSignal
 from app.models.audit_event import AuditEvent
+from app.models.contract_fact import ContractFact
+from app.models.evidence import Evidence
 
 
 EXPECTED_TABLES = {
@@ -34,6 +36,8 @@ EXPECTED_TABLES = {
     "obligations",
     "risk_signals",
     "audit_events",
+    "contract_facts",
+    "evidence",
 }
 
 
@@ -61,6 +65,12 @@ class TestModelImports:
     def test_audit_event_importable(self):
         assert AuditEvent is not None
 
+    def test_contract_fact_importable(self):
+        assert ContractFact is not None
+
+    def test_evidence_importable(self):
+        assert Evidence is not None
+
 
 class TestTableNames:
     """Each model must declare the correct table name."""
@@ -85,6 +95,12 @@ class TestTableNames:
 
     def test_audit_events_table_name(self):
         assert AuditEvent.__tablename__ == "audit_events"
+
+    def test_contract_facts_table_name(self):
+        assert ContractFact.__tablename__ == "contract_facts"
+
+    def test_evidence_table_name(self):
+        assert Evidence.__tablename__ == "evidence"
 
 
 class TestBaseMetadata:

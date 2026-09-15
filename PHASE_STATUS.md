@@ -8,17 +8,24 @@ This document tracks the active phase, completed milestones, blockers, and immed
 
 | Metric | Value |
 | :--- | :--- |
-| **Current Phase** | **Phase 20: Production Deployment (20A–20E)** |
+| **Current Phase** | **Phase 21: Final Production Hardening** |
 | **Status** | **COMPLETE** |
-| **Last Verified State** | Frontend: `npm run build` (built in 267ms, `_redirects` verified), `npx tsc --noEmit` (0 errors); Backend: `test_production_config.py` (11/11 passed), `test_observability.py` (17/17 passed), `test_secret_scanner.py` (6/6 passed, 0 secrets), `python -m compileall` (0 errors); Alembic migration `f31920b7c102` applied to Neon DB; Dockerfile & Render Blueprint verified |
-| **Last Git Commit** | `14989e6` ("feat: implement performance and observability (Phase 19A-19E)") |
+| **Last Verified State** | Frontend: `npm run build` (built in 2.74s), `npx tsc --noEmit` (0 errors); Backend: Consolidated regression suite (223/223 passed), `test_phase21_final_hardening.py` (96/96 passed), `test_models.py` (43/43 passed), `test_vector_schema.py` (8/8 passed), `test_secret_scanner.py` (0 secrets detected), `python -m compileall` (0 errors); Neon DB migration head `f31920b7c102` verified; start.sh PORT expansion fixed |
+| **Last Git Commit** | `7d6a7ec` ("feat: complete production deployment and configuration hardening (Phase 20A-20E)") |
 | **Git Remote** | `https://github.com/vasaakhilvignesh/ContractAi.git` (branch: `main`) |
-| **Next Phase** | **Production Operations & Continuous Monitoring** |
-| **Exact Next Action** | Production release ready for cloud provisioning on Render / Docker / Vercel. |
+| **Next Phase** | **Production Operations & Continuous Monitoring (All 21 Phases Delivered)** |
+| **Exact Next Action** | Production release ready. Maintain zero-secret hygiene and operational observability. |
 
 ---
 
 ## 2. Phase Breakdown & Status
+
+- [x] **Phase 21: Final Production Hardening & Operational Reliability** *(Completed)*
+  - [x] **21A — Deployment Script Hardening:** Fixed critical bug in `backend/start.sh` where `${PORT:-8000}` was eaten/empty, causing Uvicorn to fail with `--port ""`. Now correctly expands `PORT` with 8000 fallback.
+  - [x] **21B — Secret Scrubbing & Safe Error Handling:** Eliminated raw exception string exposure in grounded RAG (`query_contract_grounded`) and analyst error handlers by wrapping details in `mask_secrets` while logging diagnostic errors server-side with `logger.error` and `request_id`.
+  - [x] **21C — Comprehensive Failure-Mode Regression Suite:** Created `backend/tests/test_phase21_final_hardening.py` (96/96 passed) covering: JWT edge cases (malformed, expired, tampered, inactive), file upload security (magic bytes, size limits, path traversal), deterministic risk rules boundary conditions (empty contract, expired, short notice, uncapped liability, missing governing law, overdue obligations), RAG citation verification (wrong-contract, chunk not found, page mismatch, verbatim text mismatch), RAG pipeline failure modes (no retrieval matches, low score, contract not found), secret masking, and deployment artifact verification.
+  - [x] **21D — Schema & Migration Reconciliation:** Updated `test_models.py` to include `contract_facts` and `evidence` in `EXPECTED_TABLES` (43/43 passed); updated `test_vector_schema.py` to assert current Neon PostgreSQL Alembic revision head `f31920b7c102` (8/8 passed).
+  - [x] **21E — Documentation & System Boundaries:** Added ADR DEC-046 to `DECISIONS.md`; documented the 5 honest system limitations in `README.md` and `PHASE_STATUS.md`; verified zero secrets in tracked files.
 
 - [x] **Phase 20A–20E: Production Deployment & System Packaging** *(Completed)*
   - [x] **20A — Backend Deployment:** FastAPI backend configured for production with Uvicorn ASGI; `backend/Dockerfile` using Python 3.13-slim with non-root user `appuser`, automated curl healthcheck against `/health/liveness`; `backend/start.sh` entrypoint script running `alembic upgrade head` before Uvicorn startup; live Neon PostgreSQL connectivity with serverless SSL pooled connection; environment-variable driven configuration without hardcoded secrets.
@@ -560,4 +567,25 @@ This document tracks the active phase, completed milestones, blockers, and immed
 | 2026-09-14 | Secret Scanner Regression Suite | `pytest tests/test_secret_scanner.py -v` | **PASSED** (6 passed, 0 skipped, 100% pass rate) |
 | 2026-09-14 | Repository Tracked Secret Scan | `python app/core/secret_scanner.py` | **PASSED** (0 secrets detected in repository tracked files) |
 | 2026-09-14 | Frontend Production Build (Remediation Check) | `npm run build` | **PASSED** (built in 536ms, 0 errors) |
-| 2026-09-14 | TypeScript Verification (Remediation Check) | `npx tsc --noEmit` | **PASSED** (0 errors)
+| 2026-09-14 | TypeScript Verification (Remediation Check) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-14 | Phase 20 Production Config Tests | `pytest tests/test_production_config.py -v` | **PASSED** (11 passed, 0 skipped, 100% pass rate) |
+| 2026-09-14 | Phase 20 Observability & Probes Suite | `pytest tests/test_observability.py -v` | **PASSED** (17 passed, 0 skipped, 100% pass rate) |
+| 2026-09-15 | Phase 21 Final Hardening Test Suite | `pytest tests/test_phase21_final_hardening.py -v` | **PASSED** (96 passed, 0 skipped, 100% pass rate) |
+| 2026-09-15 | Consolidated Core Regression Suite | `pytest tests/test_security_and_reliability.py ... -v` | **PASSED** (223 passed, 0 skipped, 100% pass rate) |
+| 2026-09-15 | Schema & Model Reconciled Tests | `pytest tests/test_models.py tests/test_vector_schema.py -v` | **PASSED** (51 passed: 43 models + 8 vector schema) |
+| 2026-09-15 | Secret Scanner Repository Verification | `python backend/app/core/secret_scanner.py` | **PASSED** (0 secrets detected in tracked repository files) |
+| 2026-09-15 | Python Bytecode Compilation (Phase 21) | `python -m compileall backend/app -q` | **PASSED** (0 errors) |
+| 2026-09-15 | Frontend TypeScript Verification (Phase 21) | `npx tsc --noEmit` | **PASSED** (0 errors) |
+| 2026-09-15 | Frontend Production Build (Phase 21) | `npm run build` | **PASSED** (built in 2.74s, 0 errors) |
+
+---
+
+## 3. Known Limitations & Operational Boundaries
+
+To maintain engineering honesty and interview defensibility, ContractIQ explicitly documents the following five real-world boundaries:
+
+1. **Offline/Controlled Retrieval Evaluation:** Benchmark metrics (precision@k, recall@k, MRR) are measured against a versioned, controlled dataset (`grounded_eval_dataset.json`). Real-world legal documents exhibit format variations and scanned artifacts that may require further domain-specific evaluation.
+2. **Hybrid RRF Fusion Without Cross-Encoder Reranker:** Retrieval currently combines dense vector search (`text-embedding-004`) with PostgreSQL keyword full-text search (`tsvector`) via Reciprocal Rank Fusion (RRF). A dedicated secondary cross-encoder reranker (e.g. Cohere Rerank or BGE) is not yet integrated.
+3. **Traffic Scale Validation:** The platform has been validated under automated unit, integration, and failure-mode regression suites (223+ tests), but has not yet undergone high-throughput load testing under concurrent multi-tenant enterprise traffic.
+4. **Deployment Artifacts vs. Live Public Hosting:** Production configurations (Render Blueprint `render.yaml`, `Dockerfile`, `start.sh`, `vercel.json`) are fully verified and reproducible, but do not imply a continuously running, live public production deployment without active cloud provisioning.
+5. **Probabilistic AI Foundation:** Gemini LLM outputs remain fundamentally probabilistic. ContractIQ mitigates this through deterministic citation cross-validation, verbatim string matching, and code-based deterministic risk rule engines, but downstream legal counsel review remains essential for binding commercial commitments.

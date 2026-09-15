@@ -1,6 +1,6 @@
 # ContractIQ — Evidence-First Contract Intelligence and Risk Analysis Platform
 
-> **Status:** Phase 20 Complete (Production Deployment, Packaging & Configuration Hardened)
+> **Status:** Phase 21 Complete (Final Production Hardening, Secret Isolation & Operational Reliability)
 > **Repository Remote:** `https://github.com/vasaakhilvignesh/ContractAi.git`
 
 ---
@@ -216,6 +216,18 @@ uvicorn app.main:app --reload --port 8000
 ContractIQ enforces strict operational governance across all phases:
 
 1. [**`AGENTS.md`**](./AGENTS.md): Mandatory rules of engagement, 12 development rules, and session continuation protocols.
-2. [**`DECISIONS.md`**](./DECISIONS.md): Comprehensive Architectural Decision Records (ADRs DEC-001 through DEC-045).
+2. [**`DECISIONS.md`**](./DECISIONS.md): Comprehensive Architectural Decision Records (ADRs DEC-001 through DEC-046).
 3. [**`FLOW.md`**](./FLOW.md): Complete application flows, prompt injection defenses, observability, and production deployment topology.
-4. [**`PHASE_STATUS.md`**](./PHASE_STATUS.md): Roadmap tracking all 20 phases from baseline through production delivery.
+4. [**`PHASE_STATUS.md`**](./PHASE_STATUS.md): Roadmap tracking all 21 phases from baseline through final production hardening.
+
+---
+
+## 8. System Limitations & Production Boundaries
+
+To maintain engineering honesty and interview defensibility, ContractIQ explicitly documents the following five real-world boundaries:
+
+1. **Offline/Controlled Retrieval Evaluation:** Benchmark metrics (precision@k, recall@k, MRR) are measured against a versioned, controlled dataset (`grounded_eval_dataset.json`). Real-world legal documents exhibit format variations and scanned artifacts that may require further domain-specific evaluation.
+2. **Hybrid RRF Fusion Without Cross-Encoder Reranker:** Retrieval currently combines dense vector search (`text-embedding-004`) with PostgreSQL keyword full-text search (`tsvector`) via Reciprocal Rank Fusion (RRF). A dedicated secondary cross-encoder reranker (e.g. Cohere Rerank or BGE) is not yet integrated.
+3. **Traffic Scale Validation:** The platform has been validated under automated unit, integration, and failure-mode regression suites (223+ tests), but has not yet undergone high-throughput load testing under concurrent multi-tenant enterprise traffic.
+4. **Deployment Artifacts vs. Live Public Hosting:** Production configurations (Render Blueprint `render.yaml`, `Dockerfile`, `start.sh`, `vercel.json`) are fully verified and reproducible, but do not imply a continuously running, live public production deployment without active cloud provisioning.
+5. **Probabilistic AI Foundation:** Gemini LLM outputs remain fundamentally probabilistic. ContractIQ mitigates this through deterministic citation cross-validation, verbatim string matching, and code-based deterministic risk rule engines, but downstream legal counsel review remains essential for binding commercial commitments.

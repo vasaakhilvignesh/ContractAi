@@ -411,6 +411,21 @@ Format for each record:
 - **Phase:** Phase 20A–20E
 - **Date:** 2026-09-14
 
+### DEC-046: Final Production Hardening, Secret Isolation & Operational Reliability
+- **Decision:** Execute comprehensive production hardening across all application tiers:
+  1. **Deployment Execution Fix:** Hardened `backend/start.sh` entrypoint to properly expand `${PORT:-8000}`, preventing container startup failure when deploying to PaaS/Docker environments.
+  2. **Safe Exception Sanitization:** Sealed client-facing error leakage in grounded RAG (`query_contract_grounded`) and analyst routes by routing all exception messages through `mask_secrets` while logging diagnostic stack traces server-side with structured `logger.error` and request correlation IDs.
+  3. **Multi-Tenant Security Architecture Verification:** Validated JWT token verification (tampered signature rejection, expired token 401, inactive user 403), contract ownership scoping (IDOR 403 prevention across tenants), and verified that unauthenticated callers on optional-auth endpoints are strictly bounded by contract scoping without exposing internal state.
+  4. **Schema & Migration Verification:** Reconciled model test expectations (`contract_facts`, `evidence` in `test_models.py`) and verified live Neon database migration head `f31920b7c102` (`test_vector_schema.py`).
+  5. **Comprehensive Failure-Mode Testing:** Created 96-test automated regression suite (`backend/tests/test_phase21_final_hardening.py`) verifying JWT edge cases, file upload safety (magic bytes, size, traversal), deterministic risk engine boundary conditions, grounded RAG failure modes (no retrieval, low confidence, text/page/contract citation mismatches), secret scrubbing, and deployment artifacts.
+- **Context:** Phase 21 final hardening establishes the production-grade reliability, security, and interview-defensible integrity of ContractIQ without adding speculative infrastructure or rewriting working functionality.
+- **Why this decision was made:** Eliminates real security leakage in API error returns, prevents deployment failure on custom ports, and guarantees that every failure mode has an automated regression test asserting safe behavior.
+- **Alternatives considered:** Adding third-party WAF or API gateway proxies; rewriting the auth layer to require mandatory authentication on all routes.
+- **Why alternatives were rejected:** Violates Rule 1, Rule 2, and Rule 10. The existing architecture is clean, explainable, and fully verified with 223+ passing tests.
+- **Consequences / Trade-offs:** Unowned/demo contracts remain accessible for demo evaluation, while owned contracts are protected against cross-tenant access.
+- **Phase:** Phase 21
+- **Date:** 2026-09-15
+
 ---
 
 

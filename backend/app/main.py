@@ -248,7 +248,7 @@ def _register_routes(app: FastAPI) -> None:
     def root() -> dict:
         return {
             "project": "ContractIQ",
-            "phase": "Phase 2A — Contract API Foundation",
+            "phase": "Phase 21 — Final Production Hardening",
             "docs": "/docs",
             "health": "/health",
             "contracts": "/contracts",

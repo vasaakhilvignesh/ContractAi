@@ -1602,10 +1602,11 @@ async def query_contract_grounded(
     except rag_service.RAGServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail=mask_secrets(str(exc)),
         )
     except Exception as exc:
+        logger.error("Unexpected error during grounded RAG query for contract %s: %s", contract_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during grounded RAG query: {exc}",
+            detail=f"An unexpected error occurred during grounded RAG query: {mask_secrets(str(exc))}",
         )

@@ -124,9 +124,9 @@ class TestVectorDatabaseCatalog:
 
     @pytest.mark.db
     def test_alembic_current_revision(self, db_session: Session):
-        """Verify Alembic migration revision is at Phase 4C head."""
+        """Verify Alembic migration revision is at current schema head."""
         rev = db_session.execute(text("SELECT version_num FROM alembic_version;")).scalar()
-        assert rev == "18338ecd31a9"
+        assert rev == "f31920b7c102"
 
 
 # ====================================================================
